@@ -42,15 +42,13 @@ public:
 	~VulkanRenderer();
 
 	Material* makeMaterial(const std::string& name);
-	Mesh* makeMesh();
 	VertexBuffer* makeVertexBuffer(size_t size, VertexBuffer::DATA_USAGE usage);
 	Texture2D* makeTexture2D();
 	Sampler2D* makeSampler2D();
-	RenderState* makeRenderState();
 	std::string getShaderPath();
 	std::string getShaderExtension();
 	ConstantBuffer* makeConstantBuffer(std::string NAME, unsigned int location);
-	Technique* makeTechnique(Material* m, RenderState* r);
+	Technique* makeTechnique(Material* m);
 
 
 	int initialize(unsigned int width = 640, unsigned int height = 480);
