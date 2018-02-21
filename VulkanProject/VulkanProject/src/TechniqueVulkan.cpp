@@ -1,13 +1,12 @@
 #include "TechniqueVulkan.h"
-#include "Vulkan\RenderStateVulkan.h"
-#include "IA.h"
-#include "Vulkan\MaterialVulkan.h"
+#include "ShaderVulkan.h"
+#include "VulkanRenderer.h"
 #include <iostream>
 #include "VulkanConstruct.h"
 
 
-TechniqueVulkan::TechniqueVulkan(VulkanMaterial* m, RenderState* r, VulkanRenderer* renderer, VkRenderPass renderPass)
-	: Technique(m, r), _renderHandle(renderer), _passHandle(renderPass)
+TechniqueVulkan::TechniqueVulkan(ShaderVulkan* sHandle, VulkanRenderer* renderer, VkRenderPass renderPass)
+	: _sHandle(sHandle), _renderHandle(renderer), _passHandle(renderPass)
 {
 	createPipeline();
 }
@@ -17,21 +16,18 @@ TechniqueVulkan::~TechniqueVulkan()
 	vkDestroyPipeline(_renderHandle->getDevice(), pipeline, nullptr);
 }
 
-void TechniqueVulkan::enable(Renderer* renderer)
+void TechniqueVulkan::enable()
 {
 	/* The render pipeline (includes RenderState) is set from the Vulkan Renderer.
 	*/
-	material->enable();
 }
 
 void TechniqueVulkan::createPipeline()
 {
-	MaterialVulkan *mat = dynamic_cast<MaterialVulkan*>(material);
-	RenderStateVulkan *rState = dynamic_cast<RenderStateVulkan*>(renderState);
-	assert(mat != NULL);
+	assert(_sHandle);
 	VkPipelineShaderStageCreateInfo stages[2];
-	stages[0] = defineShaderStage(VK_SHADER_STAGE_VERTEX_BIT,  mat->vertexShader);
-	stages[1] = defineShaderStage(VK_SHADER_STAGE_FRAGMENT_BIT, mat->fragmentShader);
+	stages[0] = defineShaderStage(VK_SHADER_STAGE_VERTEX_BIT, _sHandle->vertexShader);
+	stages[1] = defineShaderStage(VK_SHADER_STAGE_FRAGMENT_BIT, _sHandle->fragmentShader);
 
 	// Vertex buffer bindings (static description...)
 	const uint32_t NUM_BUFFER = 3;
@@ -63,8 +59,8 @@ void TechniqueVulkan::createPipeline()
 
 	// Rasterization state
 	int rasterFlag = 0;
-	if (rState->getWireframe())
-		rasterFlag |= WIREFRAME_BIT;
+	//if (rState->getWireframe())
+	//	rasterFlag |= WIREFRAME_BIT;
 	VkPipelineRasterizationStateCreateInfo pipelineRasterizationStateCreateInfo =
 		defineRasterizationState(rasterFlag, VK_CULL_MODE_BACK_BIT);
 
@@ -97,7 +93,7 @@ void TechniqueVulkan::createPipeline()
 	pipelineInfo.pMultisampleState = &pipelineMultisampleStateCreateInfo;
 	pipelineInfo.pDepthStencilState = &depthStencil;
 	pipelineInfo.pColorBlendState = &pipelineColorBlendStateCreateInfo;
-	pipelineInfo.pDynamicState = rState->getDynamicState();
+	pipelineInfo.pDynamicState = nullptr;
 	pipelineInfo.layout = _renderHandle->getPipelineLayout();
 	pipelineInfo.renderPass = _passHandle;
 	pipelineInfo.subpass = 0;

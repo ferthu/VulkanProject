@@ -1,18 +1,14 @@
 #pragma once
 
-#include <GL/glew.h>
-
-#include "../Texture2D.h"
-#include "Sampler2DVulkan.h"
 #include <vulkan/vulkan.h>
+#include <string>
 
+class Sampler2DVulkan;
 class VulkanRenderer;
-class VulkanMaterial;
 
 const int MAX_TEX_BINDINGS = 6;
 
-class Texture2DVulkan :
-	public Texture2D
+class Texture2DVulkan 
 {
 private:
 	void destroyImg();
@@ -26,6 +22,7 @@ public:
 	void bind(unsigned int slot);
 
 	VulkanRenderer *_renderHandle;
+	Sampler2DVulkan *_samplerHandle;
 	VkImage _imageHandle;
 	VkDescriptorImageInfo imageInfo;
 };

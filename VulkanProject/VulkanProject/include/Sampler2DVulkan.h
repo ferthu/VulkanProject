@@ -14,7 +14,7 @@ public:
 	void setWrap(VkSamplerAddressMode s, VkSamplerAddressMode t);
 
 	VulkanRenderer * _renderHandle;
-	VkSampler _samplerHandle;
+	VkSampler _sampler;
 
 	VkFilter magFilter, minFilter;
 	VkSamplerAddressMode wrap_s, wrap_t;

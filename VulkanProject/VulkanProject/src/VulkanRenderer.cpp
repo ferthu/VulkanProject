@@ -1,7 +1,7 @@
 #include <vector>
 
 #include "VulkanRenderer.h"
-#include "MaterialVulkan.h"
+#include "ShaderVulkan.h"
 #include "VertexBufferVulkan.h"
 #include "Texture2DVulkan.h"
 #include "Sampler2DVulkan.h"

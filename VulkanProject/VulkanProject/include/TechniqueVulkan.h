@@ -1,29 +1,25 @@
 #pragma once
 #pragma once
-#include "Technique.h"
 #include "vulkan\vulkan.h"
-#include "Vulkan\VulkanRenderer.h"
 #include <map>
 
-class Renderer;
+class ShaderVulkan;
+class VulkanRenderer;
 
-
-
-class TechniqueVulkan : public Technique
+class TechniqueVulkan
 {
 public:
-	TechniqueVulkan(VulkanMaterial* m, RenderState* r, VulkanRenderer* renderer, VkRenderPass renderPass);
+	TechniqueVulkan(ShaderVulkan* sHandle, VulkanRenderer* renderer, VkRenderPass renderPass);
 	virtual ~TechniqueVulkan();
-	VulkanMaterial* getMaterial() { return material; };
-	RenderState* getRenderState() { return renderState; };
-	virtual void enable(Renderer* renderer);
+	virtual void enable();
 
 	VkPipeline pipeline;
 
 private:
 	void createPipeline();
 
-	VulkanRenderer* _renderHandle;
+	VulkanRenderer *_renderHandle;
+	ShaderVulkan *_sHandle;
 	VkRenderPass _passHandle;
 	
 	

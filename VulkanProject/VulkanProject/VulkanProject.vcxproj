@@ -124,7 +124,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\ConstantBufferVulkan.cpp" />
-    <ClCompile Include="src\MaterialVulkan.cpp" />
+    <ClCompile Include="src\ShaderVulkan.cpp" />
     <ClCompile Include="src\Sampler2DVulkan.cpp" />
     <ClCompile Include="src\TechniqueVulkan.cpp" />
     <ClCompile Include="src\Texture2DVulkan.cpp" />
@@ -134,7 +134,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\ConstantBufferVulkan.h" />
-    <ClInclude Include="include\MaterialVulkan.h" />
+    <ClInclude Include="include\ShaderVulkan.h" />
     <ClInclude Include="include\Sampler2DVulkan.h" />
     <ClInclude Include="include\TechniqueVulkan.h" />
     <ClInclude Include="include\Texture2DVulkan.h" />

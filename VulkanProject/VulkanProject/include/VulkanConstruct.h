@@ -396,7 +396,7 @@ std::vector<const char*> checkValidationLayerSupport(const char** validationLaye
 	std::vector<VkLayerProperties> availableLayers;
 	ALLOC_QUERY_NOPARAM(vkEnumerateInstanceLayerProperties, availableLayers);
 
-	std::vector<char*> available;
+	std::vector<const char*> available;
 	available.reserve(num_layer);
 	for (size_t i = 0; i < num_layer; i++) {
 		bool layerFound = false;
@@ -899,7 +899,7 @@ void checkValidImageFormats(VkPhysicalDevice device)
 		VK_FORMAT_R8G8B8_UNORM,
 		VK_FORMAT_R8G8B8_UINT
 	};
-	char* NAMES[NUM_FORMAT] =
+	const char* NAMES[NUM_FORMAT] =
 	{
 		"VK_FORMAT_R8G8B8_UNORM",
 		"VK_FORMAT_R8G8B8_UINT"

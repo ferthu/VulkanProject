@@ -2,10 +2,10 @@
 #include <vulkan/vulkan.h>
 #include <stdexcept>
 #define VULKAN_DEVICE_IMPLEMENTATION
-#include "../VulkanConstruct.h"
+#include "VulkanConstruct.h"
 #include "VulkanRenderer.h"
 
-VertexBufferVulkan::VertexBufferVulkan(VulkanRenderer *renderer, size_t size, VertexBuffer::DATA_USAGE usage)
+VertexBufferVulkan::VertexBufferVulkan(VulkanRenderer *renderer, size_t size, DATA_USAGE usage)
 	: _renderHandle(renderer), _bufferHandle(NULL), memSize(size)
 {
 	// Create buffer and allocater physical memory for it
