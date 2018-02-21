@@ -6,7 +6,7 @@
 #include "VulkanConstruct.h"
 
 
-TechniqueVulkan::TechniqueVulkan(Material* m, RenderState* r, VulkanRenderer* renderer, VkRenderPass renderPass)
+TechniqueVulkan::TechniqueVulkan(VulkanMaterial* m, RenderState* r, VulkanRenderer* renderer, VkRenderPass renderPass)
 	: Technique(m, r), _renderHandle(renderer), _passHandle(renderPass)
 {
 	createPipeline();

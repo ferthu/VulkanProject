@@ -7,7 +7,7 @@
 #include <vulkan/vulkan.h>
 
 class VulkanRenderer;
-class Material;
+class VulkanMaterial;
 
 const int MAX_TEX_BINDINGS = 6;
 

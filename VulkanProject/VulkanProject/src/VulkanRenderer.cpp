@@ -1,16 +1,13 @@
 #include <vector>
 
-#include "Vulkan\VulkanRenderer.h"
-#include "Vulkan\MaterialVulkan.h"
-#include "Vulkan\MeshVulkan.h"
-#include "Vulkan\VertexBufferVulkan.h"
-#include "Vulkan\Texture2DVulkan.h"
-#include "Vulkan\Sampler2DVulkan.h"
-#include "Vulkan\RenderStateVulkan.h"
-#include "Vulkan\ConstantBufferVulkan.h"
-#include "Technique.h"
+#include "VulkanRenderer.h"
+#include "MaterialVulkan.h"
+#include "VertexBufferVulkan.h"
+#include "Texture2DVulkan.h"
+#include "Sampler2DVulkan.h"
+#include "ConstantBufferVulkan.h"
 #include "TechniqueVulkan.h"
-#include <SDL_syswm.h>
+#include <SDL/SDL_syswm.h>
 #include <assert.h>
 #include <iostream>
 
@@ -22,48 +19,6 @@ VulkanRenderer::VulkanRenderer()
 }
 VulkanRenderer::~VulkanRenderer() { }
 
-#pragma region Make funcs
-
-Material* VulkanRenderer::makeMaterial(const std::string& name)
-{
-	MaterialVulkan* m = new MaterialVulkan(name, this);
-	return (Material*)m;
-}
-Mesh* VulkanRenderer::makeMesh()
-{
-	return (Mesh*) new MeshVulkan();
-}
-VertexBuffer* VulkanRenderer::makeVertexBuffer(size_t size, VertexBuffer::DATA_USAGE usage)
-{
-	return (VertexBuffer*) new VertexBufferVulkan(this, size, usage);
-}
-Texture2D* VulkanRenderer::makeTexture2D()
-{
-	return (Texture2D*) new Texture2DVulkan(this);
-}
-Sampler2D* VulkanRenderer::makeSampler2D()
-{
-	return (Sampler2D*) new Sampler2DVulkan(this);
-}
-RenderState* VulkanRenderer::makeRenderState()
-{
-	RenderStateVulkan* newRS = new RenderStateVulkan();
-	newRS->setGlobalWireFrame(&this->globalWireframeMode);
-	newRS->setWireFrame(false);
-	return (RenderState*)newRS;
-}
-ConstantBuffer* VulkanRenderer::makeConstantBuffer(std::string NAME, unsigned int location)
-{
-	ConstantBufferVulkan* cb = new ConstantBufferVulkan(NAME, location);
-	cb->init(this);
-	return (ConstantBuffer*) cb;
-}
-Technique* VulkanRenderer::makeTechnique(Material* m, RenderState* r)
-{
-	return (Technique*) new TechniqueVulkan(m, r, this, colorPass);
-}
-
-#pragma endregion
 
 #pragma region Init & Destroy
 
@@ -83,14 +38,14 @@ int VulkanRenderer::initialize(unsigned int width, unsigned int height)
 	applicationInfo.pEngineName = "";
 	applicationInfo.apiVersion = 0;		// setting to 1 causes error when creating instance
 
-	std::vector<char*> enabledLayers = {
+	std::vector<const char*> enabledLayers = {
 #ifdef _DEBUG
 		"VK_LAYER_LUNARG_standard_validation"
 #endif
 	};
-	std::vector<char*> availableLayers = checkValidationLayerSupport(enabledLayers.data(), enabledLayers.size());
+	std::vector<const char*> availableLayers = checkValidationLayerSupport(enabledLayers.data(), enabledLayers.size());
 
-	std::vector<char*> enabledExtensions =
+	std::vector<const char*> enabledExtensions =
 	{
 		"VK_KHR_surface",
 		"VK_KHR_win32_surface",
@@ -175,8 +130,8 @@ int VulkanRenderer::initialize(unsigned int width, unsigned int height)
 	queueInfo[QueueType::GRAPHIC] = defineQueue(queues[QueueType::GRAPHIC].family, 1.f);	// Graphic queue
 
 	// Info on device
-	char* deviceLayers[] = { "VK_LAYER_LUNARG_standard_validation" };
-	char* deviceExtensions[] = { "VK_KHR_swapchain" };
+	const char* deviceLayers[] = { "VK_LAYER_LUNARG_standard_validation" };
+	const char* deviceExtensions[] = { "VK_KHR_swapchain" };
 
 	VkDeviceCreateInfo deviceCreateInfo = {};
 	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -472,6 +427,7 @@ void VulkanRenderer::frame()
 
 	// Draw stuff..?:)
 	
+	/*
 	for (auto work : drawLists)
 	{
 		TechniqueVulkan *vk_tec = (TechniqueVulkan*)work.first;
@@ -495,7 +451,7 @@ void VulkanRenderer::frame()
 			vkCmdDraw(_frameCmdBuf, numberElements, 1, 0, 0);
 		}
 	}
-	drawLists.clear();
+	*/
 
 	vkCmdEndRenderPass(_frameCmdBuf);
 	if (vkEndCommandBuffer(_frameCmdBuf) != VK_SUCCESS) {
@@ -521,14 +477,6 @@ void VulkanRenderer::frame()
 	}
 }
 
-void VulkanRenderer::setRenderState(RenderState* ps)
-{
-	// Render pipeline (state) is set from Technique
-}
-void VulkanRenderer::submit(Mesh* mesh)
-{
-	drawLists[mesh->technique].push_back(mesh);
-}
 
 #pragma endregion
 
@@ -572,7 +520,7 @@ void padAlignment(size_t &allocOffset, VkMemoryRequirements &memReq)
 	if ((allocOffset % memReq.alignment) != 0)
 		allocOffset += memReq.alignment - (allocOffset % memReq.alignment);
 }
-void padAlignment(size_t &allocOffset, size_t &alignment)
+void padAlignment(size_t &allocOffset, size_t alignment)
 {
 	if ((allocOffset % alignment) != 0)
 		allocOffset += alignment - (allocOffset % alignment);
@@ -854,13 +802,5 @@ void VulkanRenderer::setWinTitle(const char* title)
 void VulkanRenderer::setClearColor(float r, float g, float b, float a)
 {
 	clearColor = glm::vec4{ r, g, b, a };
-}
-std::string VulkanRenderer::getShaderPath()
-{
-	return "..\\assets\\Vulkan\\";
-}
-std::string VulkanRenderer::getShaderExtension()
-{
-	return ".glsl";
 }
 #pragma endregion

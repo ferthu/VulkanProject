@@ -1,18 +1,17 @@
 #pragma once
-#include "../Sampler2D.h"
+#include "Sampler2DVulkan.h"
 #include <vulkan/vulkan.h>
 
 class VulkanRenderer;
 
-class Sampler2DVulkan :
-	public Sampler2D
+class Sampler2DVulkan
 {
 public:
 	Sampler2DVulkan(VulkanRenderer *renderer);
 	~Sampler2DVulkan();
-	void setMagFilter(FILTER filter);
-	void setMinFilter(FILTER filter);
-	void setWrap(WRAPPING s, WRAPPING t);
+	void setMagFilter(VkFilter filter);
+	void setMinFilter(VkFilter filter);
+	void setWrap(VkSamplerAddressMode s, VkSamplerAddressMode t);
 
 	VulkanRenderer * _renderHandle;
 	VkSampler _samplerHandle;

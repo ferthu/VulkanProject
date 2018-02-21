@@ -1,7 +1,7 @@
 #pragma once
-#include "../Material.h"
-#include <GL/glew.h>
 #include <vector>
+#include <map>
+#include <set>
 #include "ConstantBufferVulkan.h"
 #include "VulkanRenderer.h"
 
@@ -40,46 +40,33 @@ OUT=std::string(buff);\
 const uint32_t MAX_DESCRIPTOR_TYPES = 2; //2 for this solution...
 const uint32_t MAX_MATERIAL_DESCRIPTORS = 8;
 
-class MaterialVulkan :
-	public Material
+class ShaderVulkan
 {
-	friend VulkanRenderer;
+	enum class ShaderType { VS = 0, PS = 1, GS = 2, CS = 3 };
 
 public:
-	MaterialVulkan(const std::string& name, VulkanRenderer *renderHandle);
-	~MaterialVulkan();
+	ShaderVulkan(const std::string& name, VulkanRenderer *renderHandle);
+	~ShaderVulkan();
 	void setShader(const std::string& shaderFileName, ShaderType type);
-	void removeShader(ShaderType type);
 
-	void setDiffuse(Color c);
 
 	int compileMaterial(std::string& errString);
-	void addConstantBuffer(std::string name, unsigned int location);
 
-	void updateConstantBuffer(const void* data, size_t size, unsigned int location);
-
-	int enable();
-
-	void disable();
-
-	// Returns true if the defines for shaderType includes searchString
-	bool hasDefine(Material::ShaderType shaderType, std::string searchString);
-	
 	VkShaderModule vertexShader;
 	VkShaderModule fragmentShader;
 	
 private:
 	std::string name;
 	VulkanRenderer* _renderHandle;	// Pointer to the renderer that created this material
-	std::map<unsigned int, ConstantBuffer*> constantBuffers;
-	bool spawned;
-	
-		
+
+	std::map<ShaderType, std::string> shaderFileNames;
+	std::map<ShaderType, std::set<std::string>> shaderDefines;
+
 	int createShaders();
 	void destroyShaderObjects();
-	std::string assembleShader(Material::ShaderType type);
-	std::string assembleDefines(Material::ShaderType type);
-	std::string runCompiler(Material::ShaderType type, std::string inputFileName);
+	std::string assembleShader(ShaderType type);
+	std::string assembleDefines(ShaderType type);
+	std::string runCompiler(ShaderType type, std::string inputFileName);
 	std::vector<char> loadSPIR_V(std::string fileName);
 
 };

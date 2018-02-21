@@ -40,17 +40,7 @@ public:
 
 	VulkanRenderer();
 	~VulkanRenderer();
-
-	Material* makeMaterial(const std::string& name);
-	VertexBuffer* makeVertexBuffer(size_t size, VertexBuffer::DATA_USAGE usage);
-	Texture2D* makeTexture2D();
-	Sampler2D* makeSampler2D();
-	std::string getShaderPath();
-	std::string getShaderExtension();
-	ConstantBuffer* makeConstantBuffer(std::string NAME, unsigned int location);
-	Technique* makeTechnique(Material* m);
-
-
+	
 	int initialize(unsigned int width = 640, unsigned int height = 480);
 	void setWinTitle(const char* title);
 	void present();
@@ -142,9 +132,6 @@ private:
 	};
 	vk::QueueConstruct queues[QueueType::COUNT];
 
-	int chosenQueueFamily_asd;		// The queue family to be used
-	VkQueue queue_asd;		// Handle to the queue used
-
 	VkSurfaceFormatKHR swapchainFormat;
 	VkExtent2D swapchainExtent;
 
@@ -156,7 +143,7 @@ private:
 
 	void nextFrame();
 
-	void defineDescriptorLayout();
+	virtual void defineDescriptorLayout() = 0;
 	void generatePipelineLayout();
 	void createDepthComponents();
 };

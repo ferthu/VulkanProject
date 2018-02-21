@@ -17,7 +17,7 @@ ConstantBufferVulkan::~ConstantBufferVulkan()
 }
 
 
-void ConstantBufferVulkan::setData(const void * data, size_t size, Material * m, unsigned int location)
+void ConstantBufferVulkan::setData(const void * data, size_t size, VulkanMaterial * m, unsigned int location)
 {
 	if (!buffer[0])
 	{
@@ -56,7 +56,7 @@ void ConstantBufferVulkan::setData(const void * data, size_t size, Material * m,
 		_renderHandle->transferBufferData(buffer[_renderHandle->getTransferIndex()], data, size, 0);
 }
 
-void ConstantBufferVulkan::bind(Material *m)
+void ConstantBufferVulkan::bind(VulkanMaterial *m)
 {
 	vkCmdBindDescriptorSets(_renderHandle->getFrameCmdBuf(), VK_PIPELINE_BIND_POINT_GRAPHICS, _renderHandle->getPipelineLayout(), location, 1, &descriptor[_renderHandle->getFrameIndex()], 0, nullptr);
 }

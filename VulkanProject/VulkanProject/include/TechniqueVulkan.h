@@ -12,9 +12,9 @@ class Renderer;
 class TechniqueVulkan : public Technique
 {
 public:
-	TechniqueVulkan(Material* m, RenderState* r, VulkanRenderer* renderer, VkRenderPass renderPass);
+	TechniqueVulkan(VulkanMaterial* m, RenderState* r, VulkanRenderer* renderer, VkRenderPass renderPass);
 	virtual ~TechniqueVulkan();
-	Material* getMaterial() { return material; };
+	VulkanMaterial* getMaterial() { return material; };
 	RenderState* getRenderState() { return renderState; };
 	virtual void enable(Renderer* renderer);
 

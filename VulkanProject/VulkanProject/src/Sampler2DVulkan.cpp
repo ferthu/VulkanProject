@@ -14,39 +14,23 @@ Sampler2DVulkan::~Sampler2DVulkan()
 	destroySampler();
 }
 
-
-VkSamplerAddressMode translate(WRAPPING m)
+void Sampler2DVulkan::setMagFilter(VkFilter filter)
 {
-	if (m == WRAPPING::REPEAT)
-		return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	else //m == WRAPPING::CLAMP
-		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-}
-VkFilter translate(FILTER m)
-{
-	if (m == FILTER::LINEAR)
-		return VK_FILTER_LINEAR;
-	else //m == FILTER::POINT_SAMPLER
-		return VK_FILTER_NEAREST;
-}
-
-void Sampler2DVulkan::setMagFilter(FILTER filter)
-{
-	magFilter = translate(filter);
+	magFilter = filter;
 	reCreateSampler();
 }
 
-void Sampler2DVulkan::setMinFilter(FILTER filter)
+void Sampler2DVulkan::setMinFilter(VkFilter filter)
 {
-	minFilter = translate(filter);
+	minFilter = filter;
 	reCreateSampler();
 }
 
 
-void Sampler2DVulkan::setWrap(WRAPPING s, WRAPPING t)
+void Sampler2DVulkan::setWrap(VkSamplerAddressMode s, VkSamplerAddressMode t)
 {
-	wrap_s = translate(s);
-	wrap_t = translate(t);
+	wrap_s = s;
+	wrap_t = t;
 	reCreateSampler();
 }
 

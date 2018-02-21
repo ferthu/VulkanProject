@@ -11,8 +11,8 @@ class ConstantBufferVulkan : public ConstantBuffer
 public:
 	ConstantBufferVulkan(std::string NAME, unsigned int location);
 	virtual ~ConstantBufferVulkan();
-	void setData(const void* data, size_t size, Material* m, unsigned int location);
-	void bind(Material*);
+	void setData(const void* data, size_t size, VulkanMaterial* m, unsigned int location);
+	void bind(VulkanMaterial*);
 	void init(VulkanRenderer* renderer);
 
 private:

@@ -94,7 +94,7 @@ namespace vk
 }
 int choosePhysicalDevice(VkInstance &instance, VkSurfaceKHR &surface, vk::isDeviceSuitable deviceSpec, VkQueueFlags queueSupportReq, VkPhysicalDevice &result);
 
-std::vector<char*> checkValidationLayerSupport(char** validationLayers, size_t num_layer);
+std::vector<const char*> checkValidationLayerSupport(const char** validationLayers, size_t num_layer);
 void checkValidImageFormats(VkPhysicalDevice device);
 
 /* Swap chain */
@@ -392,7 +392,7 @@ int choosePhysicalDevice(VkInstance &instance, VkSurfaceKHR &surface, vk::isDevi
 validationLayers	<<	Set of validation layers requested.
 num_layer			<<	Number of layers in the set.
 */
-std::vector<char*> checkValidationLayerSupport(char** validationLayers, size_t num_layer) {
+std::vector<const char*> checkValidationLayerSupport(const char** validationLayers, size_t num_layer) {
 	std::vector<VkLayerProperties> availableLayers;
 	ALLOC_QUERY_NOPARAM(vkEnumerateInstanceLayerProperties, availableLayers);
 

@@ -84,7 +84,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\VulkanSDK\1.0.65.1\Include;..\..\external\glm;..\..\external\SDL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\external;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>..\..\external\SDL\lib\x64;D:\VulkanSDK\1.0.65.1\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -113,7 +113,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\VulkanSDK\1.0.65.1\Include;..\..\external\glm;..\..\external\SDL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\external;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -123,7 +123,24 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\ConstantBufferVulkan.cpp" />
+    <ClCompile Include="src\MaterialVulkan.cpp" />
+    <ClCompile Include="src\Sampler2DVulkan.cpp" />
+    <ClCompile Include="src\TechniqueVulkan.cpp" />
+    <ClCompile Include="src\Texture2DVulkan.cpp" />
+    <ClCompile Include="src\VertexBufferVulkan.cpp" />
+    <ClCompile Include="src\VulkanRenderer.cpp" />
     <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\ConstantBufferVulkan.h" />
+    <ClInclude Include="include\MaterialVulkan.h" />
+    <ClInclude Include="include\Sampler2DVulkan.h" />
+    <ClInclude Include="include\TechniqueVulkan.h" />
+    <ClInclude Include="include\Texture2DVulkan.h" />
+    <ClInclude Include="include\VertexBufferVulkan.h" />
+    <ClInclude Include="include\VulkanConstruct.h" />
+    <ClInclude Include="include\VulkanRenderer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

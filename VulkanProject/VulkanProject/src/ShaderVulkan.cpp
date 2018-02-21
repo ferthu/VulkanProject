@@ -1,4 +1,4 @@
-#include "MaterialVulkan.h"
+#include "ShaderVulkan.h"
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -6,105 +6,49 @@
 #include <locale>
 #include <codecvt>
 #include "../VulkanConstruct.h"
-#include "../IA.h"
 
 
-MaterialVulkan::MaterialVulkan(const std::string & name, VulkanRenderer *renderHandle)
+ShaderVulkan::ShaderVulkan(const std::string & name, VulkanRenderer *renderHandle)
 	: name(name), _renderHandle(renderHandle)
 {
-	spawned = false;
 }
 
-MaterialVulkan::~MaterialVulkan()
+ShaderVulkan::~ShaderVulkan()
 {
-	// Free all constant buffers
-	for (auto cb : constantBuffers)
-	{
-		delete cb.second;
-	}
 	destroyShaderObjects();
 }
 
-void MaterialVulkan::destroyShaderObjects()
+void ShaderVulkan::destroyShaderObjects()
 {
-	if (spawned)
-	{
+	if (vertexShader)
 		vkDestroyShaderModule(_renderHandle->getDevice(), vertexShader, nullptr);
+	if (fragmentShader)
 		vkDestroyShaderModule(_renderHandle->getDevice(), fragmentShader, nullptr);
-		spawned = false;
-	}
 }
 
-void MaterialVulkan::setShader(const std::string & shaderFileName, ShaderType type)
+void ShaderVulkan::setShader(const std::string & shaderFileName, ShaderType type)
 {
 	shaderFileNames[type] = shaderFileName;
 }
 
-void MaterialVulkan::removeShader(ShaderType type)
-{
-	shaderFileNames.erase(type);
-}
-
-void MaterialVulkan::setDiffuse(Color c)
-{
-	color = c;
-}
-
-int MaterialVulkan::compileMaterial(std::string & errString)
+int ShaderVulkan::compileMaterial(std::string & errString)
 {
 	//Clear first
 	destroyShaderObjects();
 	int success = createShaders();
-	spawned = true;
 	return success;
-}
-
-void MaterialVulkan::addConstantBuffer(std::string name, unsigned int location)
-{
-	constantBuffers[location] = _renderHandle->makeConstantBuffer(name, location);
-}
-
-void MaterialVulkan::updateConstantBuffer(const void* data, size_t size, unsigned int location)
-{
-	constantBuffers[location]->setData(data, size, this, location);
-}
-
-int MaterialVulkan::enable()
-{
-	for (auto cb : constantBuffers)
-	{
-		cb.second->bind(this);
-	}
-	return 0;
-}
-
-void MaterialVulkan::disable()
-{
-}
-
-bool MaterialVulkan::hasDefine(Material::ShaderType shaderType, std::string searchString)
-{
-	size_t size = shaderDefines.size();
-
-	std::set<std::string>::iterator it;
-	for (std::string str : shaderDefines[shaderType])
-	{
-		if (str.find(searchString) != std::string::npos)
-			return true;
-	}
-	return false;
 }
 
 #pragma region Shader creation
 
 
-int MaterialVulkan::createShaders()
+int ShaderVulkan::createShaders()
 {
-	std::string vs = assembleShader(Material::ShaderType::VS);
-	std::string fs = assembleShader(Material::ShaderType::PS);
+	std::string vs = assembleShader(ShaderVulkan::ShaderType::VS);
+	std::string fs = assembleShader(ShaderVulkan::ShaderType::PS);
 
-	std::string vsOut = runCompiler(Material::ShaderType::VS, vs);
-	std::string fsOut = runCompiler(Material::ShaderType::PS, fs);
+	std::string vsOut = runCompiler(ShaderVulkan::ShaderType::VS, vs);
+	std::string fsOut = runCompiler(ShaderVulkan::ShaderType::PS, fs);
 
 	//TODO: Implement error codes
 	std::vector<char> vsData = loadSPIR_V(vsOut);
@@ -137,13 +81,13 @@ int MaterialVulkan::createShaders()
 
 const char *path = "..\\assets\\Vulkan\\";
 // Returns relative file path of created file
-std::string MaterialVulkan::assembleShader(Material::ShaderType type)
+std::string ShaderVulkan::assembleShader(ShaderVulkan::ShaderType type)
 {
 	std::string fileName;
 
-	if (type == Material::ShaderType::VS)
+	if (type == ShaderVulkan::ShaderType::VS)
 		fileName = "vertexShader.glsl.vert";
-	else if (type == Material::ShaderType::PS)
+	else if (type == ShaderVulkan::ShaderType::PS)
 		fileName = "fragmentShader.glsl.frag";
 	else
 		throw std::runtime_error("Unsupported shader type!");
@@ -177,7 +121,7 @@ std::string MaterialVulkan::assembleShader(Material::ShaderType type)
 	return fileName;
 }
 // Returns relative file path of created file
-std::string MaterialVulkan::assembleDefines(Material::ShaderType type)
+std::string ShaderVulkan::assembleDefines(ShaderVulkan::ShaderType type)
 {
 
 	std::string args;
@@ -203,23 +147,24 @@ void printThreadError(const char *msg)
 	}
 }
 // Returns output file name
-std::string MaterialVulkan::runCompiler(Material::ShaderType type, std::string inputFileName)
+std::string ShaderVulkan::runCompiler(ShaderVulkan::ShaderType type, std::string inputFileName)
 {
 	// pass defines
 	std::string commandLineStr;
-	if (type == Material::ShaderType::VS)
+	if (type == ShaderVulkan::ShaderType::VS)
 		commandLineStr.append("-v -V -o vertexShader.spv -e main ");
-	else if (type == Material::ShaderType::PS)
+	else if (type == ShaderVulkan::ShaderType::PS)
 		commandLineStr.append("-v -V -o fragmentShader.spv -e main ");
 
 	commandLineStr += "\"" + inputFileName + "\"";
 
 	LPSTR commandLine = const_cast<char *>(commandLineStr.c_str());
+	const char* lpDesk = "desktop";
 
 	STARTUPINFOA startupInfo = {};
 	startupInfo.cb = sizeof(STARTUPINFOA);
 	startupInfo.lpReserved = NULL;
-	startupInfo.lpDesktop = "desktop";
+	startupInfo.lpDesktop = const_cast<char *>(lpDesk);
 	startupInfo.lpTitle = NULL;
 	startupInfo.dwX = 0;
 	startupInfo.dwY = 0;
@@ -264,10 +209,10 @@ std::string MaterialVulkan::runCompiler(Material::ShaderType type, std::string i
 	CloseHandle(processInfo.hThread);
 
 
-	return (type == Material::ShaderType::VS) ? "..\\assets\\Vulkan\\vertexShader.spv" : "..\\assets\\Vulkan\\fragmentShader.spv";
+	return (type == ShaderVulkan::ShaderType::VS) ? "..\\assets\\Vulkan\\vertexShader.spv" : "..\\assets\\Vulkan\\fragmentShader.spv";
 }
 
-std::vector<char> MaterialVulkan::loadSPIR_V(std::string fileName)
+std::vector<char> ShaderVulkan::loadSPIR_V(std::string fileName)
 {
 	// Open file and seek to end
 	std::ifstream shaderFile(fileName, std::ios::ate | std::ios::binary);
