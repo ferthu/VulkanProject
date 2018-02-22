@@ -1,0 +1,14 @@
+Todo:
+
+Everything ! ._.
+Fix a shader as a .glsl file so we know what it is!...
+
+Issues:
+
+Good practices when working here:
+
+Name VulkanRenderer: _renderHandle, in objects
+Pref. all pointer handles (not owned by the object), name _handleXXX.
+
+First time it's ok to comment a set of code that should be dynamic (eg. parameters are determined by an bool, string or w/e), 
+but pref. fix dynamic func. second time you comment/uncomment it...

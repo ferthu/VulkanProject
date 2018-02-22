@@ -19,8 +19,8 @@ void TriangleScene::initialize(VulkanRenderer *handle)
 {
 	Scene::initialize(handle);
 	triShader = new ShaderVulkan("testShaders", _renderHandle);
-	triShader->setShader("VertexShader.spv", ShaderVulkan::ShaderType::VS);
-	triShader->setShader("FragmentShader.spv", ShaderVulkan::ShaderType::PS);
+	triShader->setShader("resource/VertexShader.spv", ShaderVulkan::ShaderType::VS);
+	triShader->setShader("resource/FragmentShader.spv", ShaderVulkan::ShaderType::PS);
 	std::string err;
 	triShader->compileMaterial(err);
 

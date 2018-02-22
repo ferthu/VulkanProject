@@ -146,6 +146,9 @@
     <ClInclude Include="include\VulkanRenderer.h" />
     <ClInclude Include="include\Scenes\TriangleScene.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="resource\Todo.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
