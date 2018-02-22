@@ -44,15 +44,18 @@ int ShaderVulkan::compileMaterial(std::string & errString)
 
 int ShaderVulkan::createShaders()
 {
-	std::string vs = assembleShader(ShaderVulkan::ShaderType::VS);
-	std::string fs = assembleShader(ShaderVulkan::ShaderType::PS);
+	//std::string vs = assembleShader(ShaderVulkan::ShaderType::VS);
+	//std::string fs = assembleShader(ShaderVulkan::ShaderType::PS);
 
-	std::string vsOut = runCompiler(ShaderVulkan::ShaderType::VS, vs);
-	std::string fsOut = runCompiler(ShaderVulkan::ShaderType::PS, fs);
+	//std::string vsOut = runCompiler(ShaderVulkan::ShaderType::VS, vs);
+	//std::string fsOut = runCompiler(ShaderVulkan::ShaderType::PS, fs);
 
 	//TODO: Implement error codes
-	std::vector<char> vsData = loadSPIR_V(vsOut);
-	std::vector<char> fsData = loadSPIR_V(fsOut);
+	//std::vector<char> vsData = loadSPIR_V(vsOut);
+	//std::vector<char> fsData = loadSPIR_V(fsOut);
+
+	std::vector<char> vsData = loadSPIR_V(shaderFileNames[ShaderVulkan::ShaderType::VS]);
+	std::vector<char> fsData = loadSPIR_V(shaderFileNames[ShaderVulkan::ShaderType::PS]);
 
 	VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
 	shaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

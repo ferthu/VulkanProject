@@ -7,10 +7,13 @@
 #include "glm/glm.hpp"
 
 #pragma comment(lib, "vulkan-1.lib")
-//#pragma comment(lib,"glew32.lib")
 #pragma comment(lib,"SDL2.lib")
 #pragma comment(lib,"SDL2main.lib")
 #include "VulkanConstruct.h"
+
+#include "VertexBufferVulkan.h"
+#include "ShaderVulkan.h"
+#include "TechniqueVulkan.h"
 
 struct DevMemoryAllocation
 {
@@ -38,9 +41,9 @@ const uint32_t STORAGE_SIZE[(int)MemoryPool::Count] = { 2048 * 2048, 1024*1024, 
 const uint32_t TRANSLATION = 0;
 const uint32_t DIFFUSE_TINT = 1;
 const uint32_t DIFFUSE_SLOT = 2;
-const uint32_t POSITION = 2;
-const uint32_t NORMAL = 2;
-const uint32_t TEXTCOORD = 2;
+const uint32_t POSITION = 3;
+const uint32_t NORMAL = 4;
+const uint32_t TEXTCOORD = 5;
 
 class VulkanRenderer
 {
@@ -81,9 +84,26 @@ public:
 	uint32_t getTransferIndex() { return !frameCycle; }
 	VkPipelineLayout getPipelineLayout();
 
-
 	unsigned int getWidth();
 	unsigned int getHeight();
+
+	struct simpleTrianglePipelineObjects
+	{
+		~simpleTrianglePipelineObjects()
+		{
+			delete technique;
+			delete vertexBuffer;
+		};
+		TechniqueVulkan* technique = nullptr;
+		VertexBufferVulkan* vertexBuffer = nullptr;
+		uint32_t vertexCount = 0;
+	};
+
+	simpleTrianglePipelineObjects* trianglePipeline = nullptr;
+
+	// Creates and binds a very simple pipeline for the project that just renders triangles
+	// vertexBuffer just contains a list of float4 vertex positions
+	void simpleTrianglePipeline(VertexBufferVulkan* vertexBuffer, ShaderVulkan* shaders, uint32_t vertexCount);
 
 private:
 

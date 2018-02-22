@@ -16,10 +16,10 @@ public:
 	void bind(size_t offset, size_t size, unsigned int location);
 	void unbind();
 	size_t getSize();
+	VkBuffer _bufferHandle;
 private:
 
 	VulkanRenderer* _renderHandle;
-	VkBuffer _bufferHandle;
 	size_t memSize;
 };
 

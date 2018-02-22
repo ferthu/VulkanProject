@@ -42,9 +42,8 @@ const uint32_t MAX_MATERIAL_DESCRIPTORS = 8;
 
 class ShaderVulkan
 {
-	enum class ShaderType { VS = 0, PS = 1, GS = 2, CS = 3 };
-
 public:
+	enum class ShaderType { VS = 0, PS = 1, GS = 2, CS = 3 };
 	ShaderVulkan(const std::string& name, VulkanRenderer *renderHandle);
 	~ShaderVulkan();
 	void setShader(const std::string& shaderFileName, ShaderType type);

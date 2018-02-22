@@ -304,6 +304,8 @@ int VulkanRenderer::beginShutdown()
 
 int VulkanRenderer::shutdown()
 {
+	delete trianglePipeline;
+
 
 	// Clean up Vulkan
 	for (unsigned int i = 0; i < MAX_DESCRIPTOR_POOLS; i++)
@@ -452,6 +454,17 @@ void VulkanRenderer::frame()
 		}
 	}
 	*/
+
+	if (trianglePipeline)
+	{
+		vkCmdBindPipeline(_frameCmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, trianglePipeline->technique->pipeline);
+
+		VkBuffer vertexBuffers[] = { trianglePipeline->vertexBuffer->_bufferHandle };
+		VkDeviceSize offsets = 0;
+		vkCmdBindVertexBuffers(_frameCmdBuf, POSITION, 1, vertexBuffers, &offsets);
+
+		vkCmdDraw(_frameCmdBuf, trianglePipeline->vertexCount, 1, 0, 0);
+	}
 
 	vkCmdEndRenderPass(_frameCmdBuf);
 	if (vkEndCommandBuffer(_frameCmdBuf) != VK_SUCCESS) {
@@ -793,6 +806,14 @@ unsigned int VulkanRenderer::getWidth()
 unsigned int VulkanRenderer::getHeight()
 {
 	return swapchainExtent.height;
+}
+
+void VulkanRenderer::simpleTrianglePipeline(VertexBufferVulkan* vertexBuffer, ShaderVulkan* shaders, uint32_t vertexCount)
+{
+	trianglePipeline = new simpleTrianglePipelineObjects;
+	trianglePipeline->technique = new TechniqueVulkan(shaders, this, colorPass);
+	trianglePipeline->vertexBuffer = vertexBuffer;
+	trianglePipeline->vertexCount = vertexCount;
 }
 
 void VulkanRenderer::setWinTitle(const char* title)
