@@ -5,6 +5,7 @@
 
 #include "SDL/SDL.h"
 #include "glm/glm.hpp"
+#include <memory>
 
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib,"SDL2.lib")
@@ -33,17 +34,13 @@ enum MemoryPool
 };
 
 const int MAX_DESCRIPTOR_POOLS = 12;
-
 // Size in bytes of the memory types used
 const uint32_t STORAGE_SIZE[(int)MemoryPool::Count] = { 2048 * 2048, 1024*1024, 1024 * 1024, 1024 * 1024, 1024 * 1024 };
 
+
+class Scene;
+
 // Set constant values for now
-const uint32_t TRANSLATION = 0;
-const uint32_t DIFFUSE_TINT = 1;
-const uint32_t DIFFUSE_SLOT = 2;
-const uint32_t POSITION = 3;
-const uint32_t NORMAL = 4;
-const uint32_t TEXTCOORD = 5;
 
 class VulkanRenderer
 {
@@ -52,8 +49,10 @@ public:
 	VulkanRenderer();
 	~VulkanRenderer();
 	
-	int initialize(unsigned int width = 640, unsigned int height = 480);
 	void setWinTitle(const char* title);
+
+	int initialize(Scene *scene, unsigned int width = 640, unsigned int height = 480);
+	void frame();
 	void present();
 
 	virtual int beginShutdown();
@@ -61,7 +60,6 @@ public:
 
 	void setClearColor(float r, float g, float b, float a);
 	void clearBuffer(unsigned int flag);
-	void frame();
 
 	VkDevice getDevice();
 	VkPhysicalDevice getPhysical();
@@ -78,10 +76,15 @@ public:
 	void transferImageData(VkImage image, const void* data, glm::uvec3 img_size, uint32_t pixel_bytes, glm::ivec3 offset = glm::ivec3(0));
 	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout fromLayout, VkImageLayout toLayout);
 
-	VkSurfaceFormatKHR getSwapchainFormat();
+	/* Acquire the RenderPass for the final frame buffers presented to the screen.
+	*/
+	VkRenderPass getFramePass();
 	VkCommandBuffer getFrameCmdBuf();
 	uint32_t getFrameIndex() { return frameCycle; }
 	uint32_t getTransferIndex() { return !frameCycle; }
+
+
+	VkSurfaceFormatKHR getSwapchainFormat();
 	VkPipelineLayout getPipelineLayout();
 
 	unsigned int getWidth();
@@ -89,21 +92,12 @@ public:
 
 	struct simpleTrianglePipelineObjects
 	{
-		~simpleTrianglePipelineObjects()
-		{
-			delete technique;
-			delete vertexBuffer;
-		};
 		TechniqueVulkan* technique = nullptr;
-		VertexBufferVulkan* vertexBuffer = nullptr;
+		VertexBufferVulkan::Binding* vertexBuffer = nullptr;
 		uint32_t vertexCount = 0;
 	};
 
-	simpleTrianglePipelineObjects* trianglePipeline = nullptr;
-
-	// Creates and binds a very simple pipeline for the project that just renders triangles
-	// vertexBuffer just contains a list of float4 vertex positions
-	void simpleTrianglePipeline(VertexBufferVulkan* vertexBuffer, ShaderVulkan* shaders, uint32_t vertexCount);
+	Scene* scene;
 
 private:
 
@@ -135,7 +129,7 @@ private:
 	Pipeline layouts however can be shared between any combination of setups aslong there are no conflicts in the bindings
 	(they can include redundant binding slots..)
 	*/
-	VkRenderPass colorPass;
+	VkRenderPass frameBufferPass;
 	VkPipelineLayout pipelineLayout;
 	std::vector<VkDescriptorSetLayout> descriptorLayouts;
 
@@ -171,7 +165,6 @@ private:
 
 	void nextFrame();
 
-	void defineDescriptorLayout();
 	void generatePipelineLayout();
 	void createDepthComponents();
 };

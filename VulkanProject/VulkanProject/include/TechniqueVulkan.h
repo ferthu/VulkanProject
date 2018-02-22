@@ -9,14 +9,14 @@ class VulkanRenderer;
 class TechniqueVulkan
 {
 public:
-	TechniqueVulkan(ShaderVulkan* sHandle, VulkanRenderer* renderer, VkRenderPass renderPass);
+	TechniqueVulkan(ShaderVulkan* sHandle, VulkanRenderer* renderer, VkRenderPass renderPass, VkPipelineVertexInputStateCreateInfo &vertexInputState);
 	virtual ~TechniqueVulkan();
 	virtual void enable();
 
 	VkPipeline pipeline;
 
 private:
-	void createPipeline();
+	void createPipeline(VkPipelineVertexInputStateCreateInfo &vertexInputState);
 
 	VulkanRenderer *_renderHandle;
 	ShaderVulkan *_sHandle;

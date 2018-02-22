@@ -10,7 +10,7 @@
 #include <SDL/SDL_syswm.h>
 #include <assert.h>
 #include <iostream>
-
+#include "Scene.h"
 
 
 VulkanRenderer::VulkanRenderer()
@@ -22,7 +22,7 @@ VulkanRenderer::~VulkanRenderer() { }
 
 #pragma region Init & Destroy
 
-int VulkanRenderer::initialize(unsigned int width, unsigned int height)
+int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int height)
 {
 	swapchainExtent.height = height;
 	swapchainExtent.width = width;
@@ -251,7 +251,7 @@ int VulkanRenderer::initialize(unsigned int width, unsigned int height)
 	createDepthComponents();
 
 	// Create render pass
-	colorPass = createRenderPass_SingleColorDepth(device, swapchainCreateInfo.imageFormat, depthFormat);
+	frameBufferPass = createRenderPass_SingleColorDepth(device, swapchainCreateInfo.imageFormat, depthFormat);
 
 	// Create frame buffers.
 	const uint32_t NUM_FRAME_ATTACH = 2;
@@ -262,7 +262,7 @@ int VulkanRenderer::initialize(unsigned int width, unsigned int height)
 			swapchainImageViews[i],
 			depthImageView
 		};
-		swapChainFramebuffers[i] = createFramebuffer(device, colorPass, swapchainExtent, attachments, NUM_FRAME_ATTACH);
+		swapChainFramebuffers[i] = createFramebuffer(device, frameBufferPass, swapchainExtent, attachments, NUM_FRAME_ATTACH);
 	}
 
 
@@ -272,8 +272,6 @@ int VulkanRenderer::initialize(unsigned int width, unsigned int height)
 	_transferFences[0] = createFence(device, true);
 	_transferFences[1] = createFence(device, false);
 
-	defineDescriptorLayout();
-	generatePipelineLayout();
 
 	for (uint32_t i = 0; i < MAX_DESCRIPTOR_POOLS; i++)
 		descriptorPools[i] = NULL;
@@ -286,7 +284,16 @@ int VulkanRenderer::initialize(unsigned int width, unsigned int height)
 	_transferCmd[0] = allocateCmdBuf(device, queues[QueueType::MEM].pool);
 	_transferCmd[1] = allocateCmdBuf(device, queues[QueueType::MEM].pool);
 	_frameCmdBuf = allocateCmdBuf(device, queues[QueueType::GRAPHIC].pool);
+
+
+
+	this->scene = scene;
+	scene->defineDescriptorLayout(device, descriptorLayouts);
+	generatePipelineLayout();
+	this->scene->initialize(this);
+
 	beginCmdBuf(_transferCmd[getTransferIndex()]);
+
 
 	return 0;
 }
@@ -304,8 +311,7 @@ int VulkanRenderer::beginShutdown()
 
 int VulkanRenderer::shutdown()
 {
-	delete trianglePipeline;
-
+	delete scene;
 
 	// Clean up Vulkan
 	for (unsigned int i = 0; i < MAX_DESCRIPTOR_POOLS; i++)
@@ -341,7 +347,7 @@ int VulkanRenderer::shutdown()
 
 
 	vkDestroySwapchainKHR(device, swapchain, nullptr);
-	vkDestroyRenderPass(device, colorPass, nullptr);
+	vkDestroyRenderPass(device, frameBufferPass, nullptr);
 	vkDestroySurfaceKHR(instance, windowSurface, nullptr);
 	vkDestroyDevice(device, nullptr);
 	vkDestroyInstance(instance, nullptr);
@@ -412,7 +418,7 @@ void VulkanRenderer::frame()
 	//Render pass
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	renderPassInfo.renderPass = colorPass;
+	renderPassInfo.renderPass = frameBufferPass;
 	renderPassInfo.framebuffer = swapChainFramebuffers[frameBufIndex];
 	renderPassInfo.renderArea.offset = { 0, 0 };
 	renderPassInfo.renderArea.extent = swapchainExtent;
@@ -429,6 +435,8 @@ void VulkanRenderer::frame()
 
 	// Draw stuff..?:)
 	
+	scene->frame(_frameCmdBuf);
+
 	/*
 	for (auto work : drawLists)
 	{
@@ -455,16 +463,7 @@ void VulkanRenderer::frame()
 	}
 	*/
 
-	if (trianglePipeline)
-	{
-		vkCmdBindPipeline(_frameCmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, trianglePipeline->technique->pipeline);
 
-		VkBuffer vertexBuffers[] = { trianglePipeline->vertexBuffer->_bufferHandle };
-		VkDeviceSize offsets = 0;
-		vkCmdBindVertexBuffers(_frameCmdBuf, POSITION, 1, vertexBuffers, &offsets);
-
-		vkCmdDraw(_frameCmdBuf, trianglePipeline->vertexCount, 1, 0, 0);
-	}
 
 	vkCmdEndRenderPass(_frameCmdBuf);
 	if (vkEndCommandBuffer(_frameCmdBuf) != VK_SUCCESS) {
@@ -485,7 +484,8 @@ void VulkanRenderer::frame()
 	submitInfo.pCommandBuffers = &_frameCmdBuf;
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
-	if (vkQueueSubmit(queues[QueueType::GRAPHIC].queue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+	VkResult err = vkQueueSubmit(queues[QueueType::GRAPHIC].queue, 1, &submitInfo, VK_NULL_HANDLE);
+	if (err != VK_SUCCESS) {
 		throw std::runtime_error("failed to submit draw command buffer!");
 	}
 }
@@ -497,21 +497,6 @@ void VulkanRenderer::frame()
 void VulkanRenderer::generatePipelineLayout()
 {
 	pipelineLayout = createPipelineLayout(device, descriptorLayouts.data(), (uint32_t)descriptorLayouts.size());
-}
-
-void VulkanRenderer::defineDescriptorLayout()
-{
-	descriptorLayouts.resize(3);
-	VkDescriptorSetLayoutBinding binding;
-	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
-	descriptorLayouts[TRANSLATION] = createDescriptorLayout(device, &binding, 1);
-
-	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
-	descriptorLayouts[DIFFUSE_TINT] = createDescriptorLayout(device, &binding, 1);
-	
-	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-	descriptorLayouts[DIFFUSE_SLOT] = createDescriptorLayout(device, &binding, 1);
-	
 }
 
 void VulkanRenderer::createDepthComponents()
@@ -784,6 +769,11 @@ VkCommandBuffer VulkanRenderer::getFrameCmdBuf()
 	return _frameCmdBuf;
 }
 
+VkRenderPass VulkanRenderer::getFramePass()
+{
+	return frameBufferPass;
+}
+
 VkDevice VulkanRenderer::getDevice()
 {
 	return device;
@@ -806,14 +796,6 @@ unsigned int VulkanRenderer::getWidth()
 unsigned int VulkanRenderer::getHeight()
 {
 	return swapchainExtent.height;
-}
-
-void VulkanRenderer::simpleTrianglePipeline(VertexBufferVulkan* vertexBuffer, ShaderVulkan* shaders, uint32_t vertexCount)
-{
-	trianglePipeline = new simpleTrianglePipelineObjects;
-	trianglePipeline->technique = new TechniqueVulkan(shaders, this, colorPass);
-	trianglePipeline->vertexBuffer = vertexBuffer;
-	trianglePipeline->vertexCount = vertexCount;
 }
 
 void VulkanRenderer::setWinTitle(const char* title)

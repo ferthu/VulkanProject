@@ -87,7 +87,7 @@
       <AdditionalIncludeDirectories>..\external;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>..\..\external\SDL\lib\x64;D:\VulkanSDK\1.0.65.1\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\libs;..\..\external\SDL\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -118,7 +118,7 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>..\..\external\SDL\lib\x64;D:\VulkanSDK\1.0.65.1\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\libs;..\..\external\SDL\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -131,9 +131,11 @@
     <ClCompile Include="src\VertexBufferVulkan.cpp" />
     <ClCompile Include="src\VulkanRenderer.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="src\Scenes\TriangleScene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\ConstantBufferVulkan.h" />
+    <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\ShaderVulkan.h" />
     <ClInclude Include="include\Sampler2DVulkan.h" />
     <ClInclude Include="include\TechniqueVulkan.h" />
@@ -141,6 +143,7 @@
     <ClInclude Include="include\VertexBufferVulkan.h" />
     <ClInclude Include="include\VulkanConstruct.h" />
     <ClInclude Include="include\VulkanRenderer.h" />
+    <ClInclude Include="include\Scenes\TriangleScene.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

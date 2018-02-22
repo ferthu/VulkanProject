@@ -23,6 +23,10 @@ void VertexBufferVulkan::setData(const void * data, size_t size, size_t offset)
 {
 	_renderHandle->transferBufferInitial(_bufferHandle, data, size, offset);
 }
+void VertexBufferVulkan::setData(const void* data, Binding& binding)
+{
+	setData(data, binding.byteSize(), binding.offset);
+}
 
 void VertexBufferVulkan::bind(size_t offset, size_t size, unsigned int location)
 {
@@ -38,3 +42,22 @@ size_t VertexBufferVulkan::getSize()
 {
 	return memSize;
 }
+
+#pragma region Binding implementation
+
+void VertexBufferVulkan::Binding::bind(uint32_t location)
+{
+	buffer->bind(offset, sizeElement * numElements, location);
+}
+VertexBufferVulkan::Binding::Binding()
+	: buffer(nullptr), sizeElement(0), numElements(0), offset(0)
+{
+
+}
+VertexBufferVulkan::Binding::Binding(VertexBufferVulkan* buffer, size_t sizeElement, size_t numElements, size_t offset)
+	: buffer(buffer), sizeElement(sizeElement), numElements(numElements), offset(offset)
+{
+
+}
+
+#pragma endregion

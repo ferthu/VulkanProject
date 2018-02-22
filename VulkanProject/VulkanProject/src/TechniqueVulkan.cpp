@@ -5,10 +5,10 @@
 #include "VulkanConstruct.h"
 
 
-TechniqueVulkan::TechniqueVulkan(ShaderVulkan* sHandle, VulkanRenderer* renderer, VkRenderPass renderPass)
+TechniqueVulkan::TechniqueVulkan(ShaderVulkan* sHandle, VulkanRenderer* renderer, VkRenderPass renderPass, VkPipelineVertexInputStateCreateInfo &vertexInputState)
 	: _sHandle(sHandle), _renderHandle(renderer), _passHandle(renderPass)
 {
-	createPipeline();
+	createPipeline(vertexInputState);
 }
 
 TechniqueVulkan::~TechniqueVulkan()
@@ -22,34 +22,13 @@ void TechniqueVulkan::enable()
 	*/
 }
 
-void TechniqueVulkan::createPipeline()
+void TechniqueVulkan::createPipeline(VkPipelineVertexInputStateCreateInfo &vertexInputState)
 {
 	assert(_sHandle);
 	VkPipelineShaderStageCreateInfo stages[2];
 	stages[0] = defineShaderStage(VK_SHADER_STAGE_VERTEX_BIT, _sHandle->vertexShader);
 	stages[1] = defineShaderStage(VK_SHADER_STAGE_FRAGMENT_BIT, _sHandle->fragmentShader);
-
-	// Vertex buffer bindings (static description...)
-	//const uint32_t NUM_BUFFER = 3;
-	//const uint32_t NUM_ATTRI = 3;
-
-	const uint32_t NUM_BUFFER = 1;
-	const uint32_t NUM_ATTRI = 1;
-	VkVertexInputBindingDescription vertexBufferBindings[NUM_BUFFER] = 
-	{
-		defineVertexBinding(POSITION, 16),
-		/*defineVertexBinding(NORMAL, 16),
-		defineVertexBinding(TEXTCOORD, 8)*/
-	};
-	VkVertexInputAttributeDescription vertexAttributes[NUM_ATTRI] =
-	{
-		defineVertexAttribute(POSITION, POSITION, VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT, 0),
-		/*defineVertexAttribute(NORMAL, NORMAL, VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT, 0),
-		defineVertexAttribute(TEXTCOORD, TEXTCOORD, VkFormat::VK_FORMAT_R32G32_SFLOAT, 0)*/
-	};
-	VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = 
-		defineVertexBufferBindings(vertexBufferBindings, NUM_BUFFER, vertexAttributes, NUM_ATTRI);
-
+	
 	//
 	VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo =
 		defineInputAssembly(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
@@ -88,7 +67,7 @@ void TechniqueVulkan::createPipeline()
 	pipelineInfo.flags = 0;
 	pipelineInfo.stageCount = 2;
 	pipelineInfo.pStages = stages;
-	pipelineInfo.pVertexInputState = &pipelineVertexInputStateCreateInfo;
+	pipelineInfo.pVertexInputState = &vertexInputState;
 	pipelineInfo.pInputAssemblyState = &pipelineInputAssemblyStateCreateInfo;
 	pipelineInfo.pTessellationState = nullptr;
 	pipelineInfo.pViewportState = &pipelineViewportStateCreateInfo;
