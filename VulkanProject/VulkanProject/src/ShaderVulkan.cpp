@@ -5,7 +5,7 @@
 #include <Windows.h>
 #include <locale>
 #include <codecvt>
-#include "../VulkanConstruct.h"
+#include "VulkanConstruct.h"
 
 
 ShaderVulkan::ShaderVulkan(const std::string & name, VulkanRenderer *renderHandle)

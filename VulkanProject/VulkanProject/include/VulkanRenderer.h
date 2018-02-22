@@ -7,7 +7,7 @@
 #include "glm/glm.hpp"
 
 #pragma comment(lib, "vulkan-1.lib")
-#pragma comment(lib,"glew32.lib")
+//#pragma comment(lib,"glew32.lib")
 #pragma comment(lib,"SDL2.lib")
 #pragma comment(lib,"SDL2main.lib")
 #include "VulkanConstruct.h"
@@ -33,6 +33,14 @@ const int MAX_DESCRIPTOR_POOLS = 12;
 
 // Size in bytes of the memory types used
 const uint32_t STORAGE_SIZE[(int)MemoryPool::Count] = { 2048 * 2048, 1024*1024, 1024 * 1024, 1024 * 1024, 1024 * 1024 };
+
+// Set constant values for now
+const uint32_t TRANSLATION = 0;
+const uint32_t DIFFUSE_TINT = 1;
+const uint32_t DIFFUSE_SLOT = 2;
+const uint32_t POSITION = 2;
+const uint32_t NORMAL = 2;
+const uint32_t TEXTCOORD = 2;
 
 class VulkanRenderer
 {
@@ -143,7 +151,7 @@ private:
 
 	void nextFrame();
 
-	virtual void defineDescriptorLayout() = 0;
+	void defineDescriptorLayout();
 	void generatePipelineLayout();
 	void createDepthComponents();
 };

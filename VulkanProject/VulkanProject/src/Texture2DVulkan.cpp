@@ -1,7 +1,8 @@
 #include "Texture2DVulkan.h"
 #include "Sampler2DVulkan.h"
+#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-#include "../VulkanConstruct.h"
+#include "VulkanConstruct.h"
 #include "VulkanRenderer.h"
 #include<assert.h>
 

@@ -1,5 +1,5 @@
 #include "Sampler2DVulkan.h"
-#include "../VulkanConstruct.h"
+#include "VulkanConstruct.h"
 #include "VulkanRenderer.h"
 
 Sampler2DVulkan::Sampler2DVulkan(VulkanRenderer *renderer)
