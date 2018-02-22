@@ -74,5 +74,8 @@
     <ClInclude Include="include\Scenes\TriangleScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\UsefulFuncs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

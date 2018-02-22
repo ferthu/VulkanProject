@@ -9,6 +9,8 @@ TriangleScene::TriangleScene()
 TriangleScene::~TriangleScene()
 {
 	delete techniqueA;
+	delete triShader;
+	delete triBuffer;
 }
 
 

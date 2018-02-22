@@ -140,6 +140,7 @@
     <ClInclude Include="include\Sampler2DVulkan.h" />
     <ClInclude Include="include\TechniqueVulkan.h" />
     <ClInclude Include="include\Texture2DVulkan.h" />
+    <ClInclude Include="include\UsefulFuncs.h" />
     <ClInclude Include="include\VertexBufferVulkan.h" />
     <ClInclude Include="include\VulkanConstruct.h" />
     <ClInclude Include="include\VulkanRenderer.h" />

@@ -6,6 +6,7 @@
 #include <locale>
 #include <codecvt>
 #include "VulkanConstruct.h"
+#include "UsefulFuncs.h"
 
 
 ShaderVulkan::ShaderVulkan(const std::string & name, VulkanRenderer *renderHandle)
@@ -44,18 +45,26 @@ int ShaderVulkan::compileMaterial(std::string & errString)
 
 int ShaderVulkan::createShaders()
 {
-	//std::string vs = assembleShader(ShaderVulkan::ShaderType::VS);
-	//std::string fs = assembleShader(ShaderVulkan::ShaderType::PS);
+	std::vector<char> vsData, fsData;
 
-	//std::string vsOut = runCompiler(ShaderVulkan::ShaderType::VS, vs);
-	//std::string fsOut = runCompiler(ShaderVulkan::ShaderType::PS, fs);
-
-	//TODO: Implement error codes
-	//std::vector<char> vsData = loadSPIR_V(vsOut);
-	//std::vector<char> fsData = loadSPIR_V(fsOut);
-
-	std::vector<char> vsData = loadSPIR_V(shaderFileNames[ShaderVulkan::ShaderType::VS]);
-	std::vector<char> fsData = loadSPIR_V(shaderFileNames[ShaderVulkan::ShaderType::PS]);
+	if (ends_with(shaderFileNames[ShaderVulkan::ShaderType::VS], ".spv"))
+		vsData = loadSPIR_V(shaderFileNames[ShaderVulkan::ShaderType::VS]);
+	else
+	{
+		std::string tmpFile = assembleShader(ShaderVulkan::ShaderType::VS);
+		std::string spvFile = runCompiler(ShaderVulkan::ShaderType::VS, tmpFile);
+		vsData = loadSPIR_V(spvFile);
+	}
+	
+	// 
+	if (ends_with(shaderFileNames[ShaderVulkan::ShaderType::PS], ".spv"))
+		fsData = loadSPIR_V(shaderFileNames[ShaderVulkan::ShaderType::PS]);
+	else
+	{
+		std::string tmpFile = assembleShader(ShaderVulkan::ShaderType::PS);
+		std::string spvFile = runCompiler(ShaderVulkan::ShaderType::PS, tmpFile);
+		fsData = loadSPIR_V(spvFile);
+	}
 
 	VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
 	shaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
