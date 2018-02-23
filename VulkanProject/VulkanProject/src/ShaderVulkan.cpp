@@ -91,16 +91,16 @@ int ShaderVulkan::createShaders()
 	return 0;
 }
 
-const char *path = "..\\assets\\Vulkan\\";
+const char *path = "resource\\";
 // Returns relative file path of created file
 std::string ShaderVulkan::assembleShader(ShaderVulkan::ShaderType type)
 {
 	std::string fileName;
 
 	if (type == ShaderVulkan::ShaderType::VS)
-		fileName = "vertexShader.glsl.vert";
+		fileName = "VertexShader.glsl.vert";
 	else if (type == ShaderVulkan::ShaderType::PS)
-		fileName = "fragmentShader.glsl.frag";
+		fileName = "FragmentShader.glsl.frag";
 	else
 		throw std::runtime_error("Unsupported shader type!");
 
@@ -164,9 +164,9 @@ std::string ShaderVulkan::runCompiler(ShaderVulkan::ShaderType type, std::string
 	// pass defines
 	std::string commandLineStr;
 	if (type == ShaderVulkan::ShaderType::VS)
-		commandLineStr.append("-v -V -o vertexShader.spv -e main ");
+		commandLineStr.append("-v -V -o VertexShader.spv -e main ");
 	else if (type == ShaderVulkan::ShaderType::PS)
-		commandLineStr.append("-v -V -o fragmentShader.spv -e main ");
+		commandLineStr.append("-v -V -o FragmentShader.spv -e main ");
 
 	commandLineStr += "\"" + inputFileName + "\"";
 
@@ -196,10 +196,10 @@ std::string ShaderVulkan::runCompiler(ShaderVulkan::ShaderType type, std::string
 	LPSTARTUPINFOA startupInfoPointer = &startupInfo;
 
 	PROCESS_INFORMATION processInfo = {};
-	if (!CreateProcessA("..\\assets\\Vulkan\\glslangValidator.exe", commandLine, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, path, startupInfoPointer, &processInfo))
+	if (!CreateProcessA("resource\\glslangValidator.exe", commandLine, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, path, startupInfoPointer, &processInfo))
 	{
 		//HRESULT res = HRESULT_FROM_WIN32(GetLastError());
-		std::cout << "Failed to start shader compilation process. Ensure '..\\assets\\Vulkan\\glslangValidator.exe' exists.\n";
+		std::cout << "Failed to start shader compilation process. Ensure 'resource\\glslangValidator.exe' exists.\n";
 		throw std::runtime_error("Failed to start shader compilation process.");
 	}
 
@@ -221,7 +221,7 @@ std::string ShaderVulkan::runCompiler(ShaderVulkan::ShaderType type, std::string
 	CloseHandle(processInfo.hThread);
 
 
-	return (type == ShaderVulkan::ShaderType::VS) ? "..\\assets\\Vulkan\\vertexShader.spv" : "..\\assets\\Vulkan\\fragmentShader.spv";
+	return (type == ShaderVulkan::ShaderType::VS) ? "resource\\VertexShader.spv" : "resource\\FragmentShader.spv";
 }
 
 std::vector<char> ShaderVulkan::loadSPIR_V(std::string fileName)

@@ -19,8 +19,8 @@ void TriangleScene::initialize(VulkanRenderer *handle)
 {
 	Scene::initialize(handle);
 	triShader = new ShaderVulkan("testShaders", _renderHandle);
-	triShader->setShader("resource/VertexShader.spv", ShaderVulkan::ShaderType::VS);
-	triShader->setShader("resource/FragmentShader.spv", ShaderVulkan::ShaderType::PS);
+	triShader->setShader("resource/VertexShader.glsl", ShaderVulkan::ShaderType::VS);
+	triShader->setShader("resource/FragmentShader.glsl", ShaderVulkan::ShaderType::PS);
 	std::string err;
 	triShader->compileMaterial(err);
 
@@ -28,13 +28,13 @@ void TriangleScene::initialize(VulkanRenderer *handle)
 	// Create testing vertex buffer
 	const uint32_t NUM_TRIS = 2;
 	glm::vec4 testTriangles[NUM_TRIS * 3] = {
-		glm::vec4{ -0.5f, 0.1f, 0.5f, 0.0f },
-		glm::vec4{ -0.2f, -0.1f, 0.5f, 0.0f },
-		glm::vec4{ -0.7f, -0.1f, 0.5f, 0.0f },
+		glm::vec4{ -0.5f, 0.1f, 0.5f, 1.0f },
+		glm::vec4{ -0.2f, -0.1f, 0.5f, 1.0f },
+		glm::vec4{ -0.7f, -0.1f, 0.5f, 1.0f },
 
-		glm::vec4{ -0.5f, 0.1f, 0.5f, 0.0f },
-		glm::vec4{ -0.7f, -0.1f, 0.5f, 0.0f },
-		glm::vec4{ -0.2f, -0.1f, 0.5f, 0.0f },
+		glm::vec4{ 0.5f, 0.3f, 0.5f, 1.0f },
+		glm::vec4{ 0.7f, -0.2f, 0.5f, 1.0f },
+		glm::vec4{ 0.2f, -0.1f, 0.5f, 1.0f },
 	};
 
 	triBuffer = new VertexBufferVulkan(_renderHandle, sizeof(glm::vec4) * NUM_TRIS * 3, VertexBufferVulkan::DATA_USAGE::STATIC);
@@ -72,7 +72,7 @@ void TriangleScene::frame(VkCommandBuffer cmdBuf)
 	vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, techniqueA->pipeline);
 
 	VkDeviceSize offsets = 0;
-	triVertexBinding.bind(3);
+	triVertexBinding.bind(0);
 	vkCmdDraw(cmdBuf, triVertexBinding.numElements, 1, 0, 0);
 
 }
