@@ -73,7 +73,7 @@ void TriangleScene::frame(VkCommandBuffer cmdBuf)
 
 	VkDeviceSize offsets = 0;
 	triVertexBinding.bind(0);
-	vkCmdDraw(cmdBuf, triVertexBinding.numElements, 1, 0, 0);
+	vkCmdDraw(cmdBuf, (uint32_t)triVertexBinding.numElements, 1, 0, 0);
 
 }
 

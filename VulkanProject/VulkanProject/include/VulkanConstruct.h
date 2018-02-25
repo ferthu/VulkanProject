@@ -51,11 +51,16 @@ inline T rmvFlag(T property, uint32_t rmv)
 #pragma region Structs
 namespace vk
 {
-	struct QueueConstruct
+	struct QueueRef
 	{
 		int family;
+		uint32_t index;			// Queue index within the family
+		float priority;			// Queue priority (defaults to 1.f)
 		VkCommandPool pool;
 		VkQueue queue;
+
+		QueueRef();
+		QueueRef(int family, float priority);
 
 		/* Destroy the queue related resources (the VkCommandPool)
 		*/
@@ -64,6 +69,28 @@ namespace vk
 		*/
 		void getDeviceQueue(VkDevice dev);
 		int createCommandPool(VkDevice dev, VkCommandPoolCreateFlags flag);
+	};
+	/* Vulkan queue container for generating, storing and destroying VkQueues and the related command pool.
+	*/
+	class QueueConstruct
+	{
+	private:
+		// Device reference
+		VkDevice _device;
+		std::vector<QueueRef> _queues;
+	public:
+		QueueConstruct();
+		QueueConstruct(size_t numQueues);
+		~QueueConstruct();
+		void destroy(VkDevice device);
+
+		void define(VkDeviceQueueCreateInfo* arr, uint32_t &queueInfoLen, float *queuePrioAlloc);
+		void fetchDeviceQueues(VkDevice device);
+		void createCommandPool(VkDevice device, VkCommandPoolCreateFlags flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+
+		void push_queue(VkPhysicalDevice physDev, float priority, VkQueueFlags* prefFlags, uint32_t numFlags);
+		QueueRef& operator[](uint32_t index);
+		size_t size();
 	};
 }
 #pragma endregion
@@ -77,7 +104,7 @@ int matchQueueFamily(VkPhysicalDevice &device, VkQueueFlags* pref_queueFlag, int
 int pickQueueFamily(VkPhysicalDevice &device, VkQueueFlags* pref_queueFlag, int num_flag);
 
 VkDeviceQueueCreateInfo defineQueues(int family, float *prio, uint32_t num_queues);
-VkDeviceQueueCreateInfo defineQueue(int family, float prio);
+VkDeviceQueueCreateInfo defineQueue(int family, float prio = 1.f);
 
 /* Device*/
 
@@ -196,23 +223,30 @@ VkPipelineVertexInputStateCreateInfo defineVertexBufferBindings(
 
 #ifdef VULKAN_DEVICE_IMPLEMENTATION
 #include <iostream>
+#include <map>
 
 #pragma region Structs
 namespace vk
 {
+	QueueRef::QueueRef()
+		: index(0), priority(1.f)
+	{}
+	QueueRef::QueueRef(int family, float priority)
+		: family(family), index(0), priority(priority)
+	{}
 	/* Destroy the queue related resources (the VkCommandPool)
 	*/
-	void QueueConstruct::destroyQueue(VkDevice dev)
+	void QueueRef::destroyQueue(VkDevice dev)
 	{
 		vkDestroyCommandPool(dev, pool, nullptr);
 	}
 	/* Acquire the queue from device.
 	*/
-	void QueueConstruct::getDeviceQueue(VkDevice dev)
+	void QueueRef::getDeviceQueue(VkDevice dev)
 	{
-		vkGetDeviceQueue(dev, family, 0, &queue);
+		vkGetDeviceQueue(dev, family, index, &queue);
 	}
-	int QueueConstruct::createCommandPool(VkDevice dev, VkCommandPoolCreateFlags flag)
+	int QueueRef::createCommandPool(VkDevice dev, VkCommandPoolCreateFlags flag)
 	{
 		VkCommandPoolCreateInfo commandPoolCreateInfo = {};
 		commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -224,6 +258,77 @@ namespace vk
 			return -1;
 		return 0;
 	}
+
+	QueueConstruct::QueueConstruct()
+		: _queues()
+	{
+	}
+	QueueConstruct::QueueConstruct(size_t numQueues)
+		: _queues()
+	{
+		_queues.reserve(numQueues);
+	}
+	void QueueConstruct::destroy(VkDevice device)
+	{
+		for (size_t i = 0; i < _queues.size(); i++)
+			_queues[i].destroyQueue(device);
+	}
+
+	QueueConstruct::~QueueConstruct()
+	{
+	}
+	/* Define queue create info
+	queueInfo		<<	Allocated queue array
+	queueInfoLen	<>	Takes pre-allocated size of queueInfo array, output the number of queues defined.
+	queuePrioAlloc	<<	Float array that is filled with priorities for the VkDeviceQueueCreateInfo, should be of equal size to the number of queues allocated.
+	*/
+	void QueueConstruct::define(VkDeviceQueueCreateInfo* queueInfo, uint32_t &queueInfoLen, float *queuePrioAlloc)
+	{
+		std::map<int, std::vector<QueueRef*>> queue_set;
+
+		for (int i = 0; i < _queues.size(); i++)
+			queue_set[_queues[i].family].push_back(&_queues[i]);
+
+		// Define the create info structs.
+		uint32_t numDefines = 0;
+		uint32_t numPrioAlloc = 0;
+		for (auto &pair : queue_set)
+		{
+			float *prioPtr = queuePrioAlloc + numPrioAlloc;
+			if (numDefines >= queueInfoLen) throw std::runtime_error("Error - QueueAllocation::define: Queue info array passed to function is to small.");
+			for (size_t i = 0; i < pair.second.size(); i++)
+			{
+				queuePrioAlloc[numPrioAlloc++] = pair.second[i]->priority;
+				pair.second[i]->index = (uint32_t)i;
+			}
+			queueInfo[numDefines++] = defineQueues(pair.first, prioPtr, (uint32_t)pair.second.size());
+		}
+		queueInfoLen = numDefines;
+	}
+	void QueueConstruct::fetchDeviceQueues(VkDevice device)
+	{
+		for (int i = 0; i < _queues.size(); i++)
+			_queues[i].getDeviceQueue(device);
+	}
+	void QueueConstruct::createCommandPool(VkDevice device, VkCommandPoolCreateFlags flags)
+	{
+		for (int i = 0; i < _queues.size(); i++)
+		{
+			if (_queues[i].createCommandPool(device, flags))
+				throw std::runtime_error("Failed to create staging command pool.");
+		}
+	}
+
+	void QueueConstruct::push_queue(VkPhysicalDevice physDev, float priority, VkQueueFlags* prefFlags, uint32_t numFlags)
+	{
+		int family = pickQueueFamily(physDev, prefFlags, numFlags);
+		_queues.push_back(QueueRef(family, priority));
+	}
+	QueueRef& QueueConstruct::operator[](uint32_t index)
+	{
+		return _queues[index];
+	}
+	size_t QueueConstruct::size() { return _queues.size(); }
 }
 #pragma endregion
 

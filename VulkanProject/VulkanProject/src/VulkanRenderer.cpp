@@ -117,18 +117,24 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	{
 		(VK_QUEUE_GRAPHICS_BIT)
 	};
+	VkQueueFlags prefComputeQueue[] =
+	{
+		(VK_QUEUE_COMPUTE_BIT)
+	};
 	VkQueueFlags prefMemQueue[] =
 	{
 		(VK_QUEUE_TRANSFER_BIT)
 	};
-	queues[QueueType::MEM].family = pickQueueFamily(physicalDevice, prefMemQueue, sizeof(prefMemQueue) / sizeof(VkQueueFlags));
-	queues[QueueType::GRAPHIC].family = pickQueueFamily(physicalDevice, prefGraphQueue, sizeof(prefGraphQueue) / sizeof(VkQueueFlags));
+	queues = vk::QueueConstruct(QueueType::COUNT);
+	queues.push_queue(physicalDevice, 1.f, prefMemQueue, (uint32_t)std::size(prefMemQueue));
+	queues.push_queue(physicalDevice, 1.f, prefGraphQueue, (uint32_t)std::size(prefGraphQueue));
+	queues.push_queue(physicalDevice, 1.f, prefComputeQueue, (uint32_t)std::size(prefComputeQueue));
 
 	// Info on queues
 	VkDeviceQueueCreateInfo queueInfo[QueueType::COUNT] = {};
-	queueInfo[QueueType::MEM] = defineQueue(queues[QueueType::MEM].family, 1.f);			// Mem queue
-	queueInfo[QueueType::GRAPHIC] = defineQueue(queues[QueueType::GRAPHIC].family, 1.f);	// Graphic queue
-
+	uint32_t num_queue_families = QueueType::COUNT;
+	float prioArr[QueueType::COUNT];
+	queues.define(queueInfo, num_queue_families, prioArr);
 	// Info on device
 	const char* deviceLayers[] = { "VK_LAYER_LUNARG_standard_validation" };
 	const char* deviceExtensions[] = { "VK_KHR_swapchain" };
@@ -137,7 +143,7 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	deviceCreateInfo.pNext = nullptr;
 	deviceCreateInfo.flags = 0;
-	deviceCreateInfo.queueCreateInfoCount = QueueType::COUNT;
+	deviceCreateInfo.queueCreateInfoCount = num_queue_families;
 	deviceCreateInfo.pQueueCreateInfos = queueInfo;
 #
 #ifdef _DEBUG
@@ -167,10 +173,7 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 
 	vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
 
-	queues[QueueType::MEM].getDeviceQueue(device);
-	queues[QueueType::GRAPHIC].getDeviceQueue(device);
-
-
+	queues.fetchDeviceQueues(device);
 #
 #ifdef _DEBUG
 	checkValidImageFormats(physicalDevice);
@@ -202,7 +205,7 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 #endif
 		VK_PRESENT_MODE_MAILBOX_KHR // Oldest finished frame are replaced if 'framebuffer' queue is filled.
 	};
-	VkPresentModeKHR presentMode = chooseSwapPresentMode(physicalDevice, windowSurface, presentModePref, sizeof(presentModePref) / sizeof(VkPresentModeKHR));
+	VkPresentModeKHR presentMode = chooseSwapPresentMode(physicalDevice, windowSurface, presentModePref, std::size(presentModePref));
 
 	// Create swap chain
 	VkSwapchainCreateInfoKHR swapchainCreateInfo = {};
@@ -240,10 +243,9 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	// Allocate device memory
 	createStagingBuffer();
 	// Create command pools
-	if (queues[QueueType::MEM].createCommandPool(device, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT))
-		throw std::runtime_error("Failed to create staging command pool.");
-	if (queues[QueueType::GRAPHIC].createCommandPool(device, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT))
-		throw std::runtime_error("Failed to create graphic command pool.");
+	queues.createCommandPool(device, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+
+	// Allocate device memory
 	allocateImageMemory(MemoryPool::IMAGE_RGBA8_BUFFER, STORAGE_SIZE[MemoryPool::IMAGE_RGBA8_BUFFER], VK_FORMAT_R8G8B8A8_UNORM);
 	allocateBufferMemory(MemoryPool::UNIFORM_BUFFER, STORAGE_SIZE[MemoryPool::UNIFORM_BUFFER], VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 	allocateBufferMemory(MemoryPool::VERTEX_BUFFER, STORAGE_SIZE[MemoryPool::VERTEX_BUFFER], VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
@@ -284,9 +286,9 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	_transferCmd[0] = allocateCmdBuf(device, queues[QueueType::MEM].pool);
 	_transferCmd[1] = allocateCmdBuf(device, queues[QueueType::MEM].pool);
 	_frameCmdBuf = allocateCmdBuf(device, queues[QueueType::GRAPHIC].pool);
+	_computeCmdBuf = allocateCmdBuf(device, queues[QueueType::COMPUTE].pool);
 
-
-
+	// Our scene implementation
 	this->scene = scene;
 	scene->defineDescriptorLayout(device, descriptorLayouts);
 	generatePipelineLayout();
@@ -323,9 +325,8 @@ int VulkanRenderer::shutdown()
 	for (size_t i = 0; i < descriptorLayouts.size(); i++)
 			vkDestroyDescriptorSetLayout(device, descriptorLayouts[i], nullptr);
 
-	// Destryou command pools
-	for (size_t i = 0; i < QueueType::COUNT; i++)
-		queues[i].destroyQueue(device);
+	// Destroy command pools
+	queues.destroy(device);
 
 	vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
 	vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
@@ -395,20 +396,22 @@ void VulkanRenderer::present()
 
 void VulkanRenderer::nextFrame()
 {
-	frameCycle = !frameCycle;	// Cycle frame index
-
-	// Wait for second to last transfer to complete, then create new command buffer!
-	waitFence(device, _transferFences[getTransferIndex()]);
+	// Cycle frame index
+	frameCycle = !frameCycle;	
+	// Reset the command buffer
 	VkResult err = vkResetCommandBuffer(_transferCmd[getTransferIndex()], VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 	if (err)
 		std::cout << "Command buff reset err\n";
+	// Start recording new transfer commands
 	beginCmdBuf(_transferCmd[getTransferIndex()]);
 }
 
 void VulkanRenderer::frame()
 {
-	// Submit transfer commands
+	// Submit new transfer commands
 	endSingleCommand(device, queues[QueueType::MEM].queue, _transferCmd[getTransferIndex()], _transferFences[getTransferIndex()]);
+	// Wait for previous transfer frame to complete before using it for rendering! 
+	waitFence(device, _transferFences[getFrameIndex()]);
 
 	// Start rendering
 	vkAcquireNextImageKHR(device, swapchain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &frameBufIndex);
@@ -486,7 +489,7 @@ void VulkanRenderer::frame()
 	submitInfo.pSignalSemaphores = signalSemaphores;
 	VkResult err = vkQueueSubmit(queues[QueueType::GRAPHIC].queue, 1, &submitInfo, VK_NULL_HANDLE);
 	if (err != VK_SUCCESS) {
-		throw std::runtime_error("failed to submit draw command buffer!");
+		throw std::runtime_error("Failed to submit draw command buffer!");
 	}
 }
 
@@ -728,7 +731,7 @@ uint32_t VulkanRenderer::updateStagingBuffer(const void* data, size_t size)
 	memcpy(bufferContents, data, size);
 
 	vkUnmapMemory(device, memPool[MemoryPool::STAGING_BUFFER].handle);
-	return offset;
+	return (uint32_t)offset;
 }
 
 void VulkanRenderer::createStagingBuffer()

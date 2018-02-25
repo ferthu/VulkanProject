@@ -135,7 +135,7 @@ private:
 
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
-	VkCommandBuffer _frameCmdBuf;
+	VkCommandBuffer _frameCmdBuf, _computeCmdBuf;
 	VkCommandBuffer _transferCmd[2];
 	VkFence			_transferFences[2];
 	uint32_t frameBufIndex;								// Tracks frame buffer index for current frame
@@ -150,9 +150,10 @@ private:
 	enum QueueType {
 		MEM = 0,
 		GRAPHIC = 1,
-		COUNT = 2
+		COMPUTE = 2,
+		COUNT = 3
 	};
-	vk::QueueConstruct queues[QueueType::COUNT];
+	vk::QueueConstruct queues;
 
 	VkSurfaceFormatKHR swapchainFormat;
 	VkExtent2D swapchainExtent;
