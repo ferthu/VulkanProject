@@ -49,10 +49,15 @@ namespace mf{
 			float off = rnd.randomFloat(-sphereRad, sphereRad);
 			glm::vec3 nor = rnd.randomNormal();
 			glm::vec3 pos = nor * off;
+			glm::vec3 forw = glm::cross(nor, abs(nor.y) + abs(nor.z) > 0.01f ? glm::vec3(1, 0, 0) : glm::vec3(0, -1, 0));
+			glm::vec3 right = glm::cross(forw, nor);
 			float size = rnd.randomFloat(triSize.x, triSize.y);
 			right *= 0.5f * size;
 			forw *= 0.5f * size;
 			// Set params
+			posBuf[i * 3] = glm::vec4(pos - right - forw, 1.f);
+			posBuf[i * 3 + 1] = glm::vec4(pos + forw, 1.f);
+			posBuf[i * 3 + 2] = glm::vec4(pos + right - forw, 1.f);
 			if (norBuf)
 			{
 				norBuf[i * 3] = nor;
