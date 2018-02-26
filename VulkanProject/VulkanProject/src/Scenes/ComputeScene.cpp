@@ -1,22 +1,21 @@
-#include "Scenes/TriangleScene.h"
+#include "Scenes/ComputeScene.h"
 #include "VulkanRenderer.h"
 #include "Stuff/RandomGenerator.h"
 
-TriangleScene::TriangleScene()
+
+ComputeScene::ComputeScene()
 {
 }
 
 
-TriangleScene::~TriangleScene()
+ComputeScene::~ComputeScene()
 {
 	delete techniqueA;
 	delete triShader;
 	delete triBuffer;
 }
 
-
-
-void TriangleScene::initialize(VulkanRenderer *handle)
+void ComputeScene::initialize(VulkanRenderer *handle)
 {
 	Scene::initialize(handle);
 	triShader = new ShaderVulkan("testShaders", _renderHandle);
@@ -40,7 +39,7 @@ void TriangleScene::initialize(VulkanRenderer *handle)
 	makeTechniqueA();
 }
 
-void TriangleScene::makeTechniqueA()
+void ComputeScene::makeTechniqueA()
 {
 
 	const uint32_t NUM_BUFFER = 1;
@@ -62,9 +61,8 @@ void TriangleScene::makeTechniqueA()
 	techniqueA = new TechniqueVulkan(triShader, _renderHandle, _renderHandle->getFramePass(), vertexBindings);
 }
 
-void TriangleScene::frame(VkCommandBuffer cmdBuf)
+void ComputeScene::frame(VkCommandBuffer cmdBuf)
 {
-	_renderHandle->beginFramePass();
 
 	vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, techniqueA->pipeline);
 
@@ -72,11 +70,10 @@ void TriangleScene::frame(VkCommandBuffer cmdBuf)
 	triVertexBinding.bind(0);
 	vkCmdDraw(cmdBuf, (uint32_t)triVertexBinding.numElements, 1, 0, 0);
 
-	_renderHandle->submitFramePass();
 }
 
 
-void TriangleScene::defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout)
+void ComputeScene::defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout)
 {
 	layout.resize(1);
 	VkDescriptorSetLayoutBinding binding;

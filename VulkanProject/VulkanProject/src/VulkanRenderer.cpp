@@ -195,7 +195,7 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	// Get supported formats
 	std::vector<VkSurfaceFormatKHR> formats;
 	ALLOC_QUERY_ASSERT(result, vkGetPhysicalDeviceSurfaceFormatsKHR, formats, physicalDevice, windowSurface);
-	swapchainFormat = formats[0];
+	swapchainFormat = formats[0]; // Just select the first available format
 
 	// Choose the mode for the swap chain that determines how the frame buffers are swapped.
 	VkPresentModeKHR presentModePref[] =
@@ -214,7 +214,7 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	swapchainCreateInfo.flags = 0;
 	swapchainCreateInfo.surface = windowSurface;
 	swapchainCreateInfo.minImageCount = surfaceCapabilities.minImageCount;
-	swapchainCreateInfo.imageFormat = swapchainFormat.format;	// Just select the first available format
+	swapchainCreateInfo.imageFormat = swapchainFormat.format;	
 	swapchainCreateInfo.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 	swapchainCreateInfo.imageExtent = swapchainExtent;
 	swapchainCreateInfo.imageArrayLayers = 1;
@@ -406,16 +406,9 @@ void VulkanRenderer::nextFrame()
 	beginCmdBuf(_transferCmd[getTransferIndex()]);
 }
 
-void VulkanRenderer::frame()
+void VulkanRenderer::beginFramePass()
 {
-	// Submit new transfer commands
-	endSingleCommand(device, queues[QueueType::MEM].queue, _transferCmd[getTransferIndex()], _transferFences[getTransferIndex()]);
-	// Wait for previous transfer frame to complete before using it for rendering! 
-	waitFence(device, _transferFences[getFrameIndex()]);
-
-	// Start rendering
-	vkAcquireNextImageKHR(device, swapchain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &frameBufIndex);
-
+	// Begin recording frame commands
 	beginCmdBuf(_frameCmdBuf, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
 	//Render pass
@@ -435,38 +428,9 @@ void VulkanRenderer::frame()
 	renderPassInfo.pClearValues = clearValues;
 
 	vkCmdBeginRenderPass(_frameCmdBuf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-	// Draw stuff..?:)
-	
-	scene->frame(_frameCmdBuf);
-
-	/*
-	for (auto work : drawLists)
-	{
-		TechniqueVulkan *vk_tec = (TechniqueVulkan*)work.first;
-		assert(dynamic_cast<TechniqueVulkan*>(work.first));
-
-		vkCmdBindPipeline(_frameCmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_tec->pipeline);
-		work.first->enable(this);
-		for (auto mesh : work.second)
-		{
-			uint32_t numberElements = (uint32_t)mesh->geometryBuffers[0].numElements;
-			for (auto t : mesh->textures)
-			{
-				// we do not really know here if the sampler has been
-				// defined in the shader.
-				t.second->bind(t.first);
-			}
-			for (auto element : mesh->geometryBuffers) {
-				mesh->bindIAVertexBuffer(element.first);
-			}
-			mesh->txBuffer->bind(vk_tec->getMaterial());
-			vkCmdDraw(_frameCmdBuf, numberElements, 1, 0, 0);
-		}
-	}
-	*/
-
-
+}
+void VulkanRenderer::submitFramePass()
+{
 
 	vkCmdEndRenderPass(_frameCmdBuf);
 	if (vkEndCommandBuffer(_frameCmdBuf) != VK_SUCCESS) {
@@ -491,6 +455,24 @@ void VulkanRenderer::frame()
 	if (err != VK_SUCCESS) {
 		throw std::runtime_error("Failed to submit draw command buffer!");
 	}
+
+}
+void VulkanRenderer::frame()
+{
+	// Submit new transfer commands
+	endSingleCommand(device, queues[QueueType::MEM].queue, _transferCmd[getTransferIndex()], _transferFences[getTransferIndex()]);
+	// Wait for previous transfer frame to complete before using it for rendering! 
+	waitFence(device, _transferFences[getFrameIndex()]);
+
+	// Start rendering
+	vkAcquireNextImageKHR(device, swapchain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &frameBufIndex);
+
+
+
+	// Draw stuff..?:)
+	scene->frame(_frameCmdBuf);
+
+
 }
 
 

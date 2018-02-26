@@ -55,6 +55,10 @@ public:
 	void frame();
 	void present();
 
+	// Initiate frame pass
+	void beginFramePass();
+	void submitFramePass();
+
 	virtual int beginShutdown();
 	int shutdown();
 
@@ -89,17 +93,10 @@ public:
 
 	unsigned int getWidth();
 	unsigned int getHeight();
-
-	struct simpleTrianglePipelineObjects
-	{
-		TechniqueVulkan* technique = nullptr;
-		VertexBufferVulkan::Binding* vertexBuffer = nullptr;
-		uint32_t vertexCount = 0;
-	};
-
-	Scene* scene;
+	
 
 private:
+	Scene* scene;
 
 	VkInstance instance;
 	VkDevice device;
@@ -117,6 +114,7 @@ private:
 	std::vector<VkImage> swapchainImages;				// Array of images in the swapchain, use vkAquireNextImageKHR(...) to aquire image for drawing to
 	std::vector<VkImageView> swapchainImageViews;		// Image views for the swap chain images
 	std::vector<VkFramebuffer> swapChainFramebuffers;	// Combined sets of images that make up each frame buffer.
+
 	VkFormat depthFormat;								// Depth image format.
 	VkImage depthImage;									// Frame buffer depth image
 	VkImageView depthImageView;							// Frame buffer depth image view.

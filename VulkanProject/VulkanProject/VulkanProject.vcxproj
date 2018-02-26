@@ -123,6 +123,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\Scenes\ComputeScene.cpp" />
     <ClCompile Include="src\ConstantBufferVulkan.cpp" />
     <ClCompile Include="src\ShaderVulkan.cpp" />
     <ClCompile Include="src\Sampler2DVulkan.cpp" />
@@ -135,6 +136,7 @@
     <ClCompile Include="src\Scenes\TriangleScene.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\Scenes\ComputeScene.h" />
     <ClInclude Include="include\ConstantBufferVulkan.h" />
     <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\ShaderVulkan.h" />
