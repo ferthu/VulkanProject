@@ -126,6 +126,7 @@
     <ClCompile Include="src\ConstantBufferVulkan.cpp" />
     <ClCompile Include="src\ShaderVulkan.cpp" />
     <ClCompile Include="src\Sampler2DVulkan.cpp" />
+    <ClCompile Include="src\Stuff\RandomGenerator.cpp" />
     <ClCompile Include="src\TechniqueVulkan.cpp" />
     <ClCompile Include="src\Texture2DVulkan.cpp" />
     <ClCompile Include="src\VertexBufferVulkan.cpp" />
@@ -138,6 +139,7 @@
     <ClInclude Include="include\Scene.h" />
     <ClInclude Include="include\ShaderVulkan.h" />
     <ClInclude Include="include\Sampler2DVulkan.h" />
+    <ClInclude Include="include\Stuff\RandomGenerator.h" />
     <ClInclude Include="include\TechniqueVulkan.h" />
     <ClInclude Include="include\Texture2DVulkan.h" />
     <ClInclude Include="include\UsefulFuncs.h" />

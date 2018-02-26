@@ -1,5 +1,6 @@
 #include "Scenes/TriangleScene.h"
 #include "VulkanRenderer.h"
+#include "Stuff/RandomGenerator.h"
 
 TriangleScene::TriangleScene()
 {
@@ -26,16 +27,11 @@ void TriangleScene::initialize(VulkanRenderer *handle)
 
 
 	// Create testing vertex buffer
-	const uint32_t NUM_TRIS = 2;
-	glm::vec4 testTriangles[NUM_TRIS * 3] = {
-		glm::vec4{ -0.5f, 0.1f, 0.5f, 1.0f },
-		glm::vec4{ -0.2f, -0.1f, 0.5f, 1.0f },
-		glm::vec4{ -0.7f, -0.1f, 0.5f, 1.0f },
-
-		glm::vec4{ 0.5f, 0.3f, 0.5f, 1.0f },
-		glm::vec4{ 0.7f, -0.2f, 0.5f, 1.0f },
-		glm::vec4{ 0.2f, -0.1f, 0.5f, 1.0f },
-	};
+	const uint32_t NUM_TRIS = 10;
+	mf::RandomGenerator rnd;
+	rnd.seedGenerator();
+	glm::vec4 testTriangles[NUM_TRIS * 3];
+	mf::distributeTriangles(rnd, 1.f, NUM_TRIS, glm::vec2(0.1f, 0.5f), testTriangles, nullptr);
 
 	triBuffer = new VertexBufferVulkan(_renderHandle, sizeof(glm::vec4) * NUM_TRIS * 3, VertexBufferVulkan::DATA_USAGE::STATIC);
 	triVertexBinding = VertexBufferVulkan::Binding(triBuffer, sizeof(glm::vec4), NUM_TRIS * 3, 0);
