@@ -71,6 +71,45 @@ int Texture2DVulkan::loadFromFile(std::string filename)
 	return 0;
 }
 
+void Texture2DVulkan::createShadowMap(uint32_t height, uint32_t width)
+{
+	VkImageCreateInfo imageCreateInfo = {};
+	imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageCreateInfo.pNext = nullptr;
+	imageCreateInfo.flags = 0;
+	imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+	imageCreateInfo.extent.width = width;
+	imageCreateInfo.extent.height = height;
+	imageCreateInfo.extent.depth = 1;
+	imageCreateInfo.mipLevels = 1;
+	imageCreateInfo.arrayLayers = 1;
+	imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+	imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+	imageCreateInfo.format = VK_FORMAT_D16_UNORM;
+	imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	if (vkCreateImage(_renderHandle->getDevice(), &imageCreateInfo, nullptr, &_imageHandle) != VK_SUCCESS)
+		throw std::runtime_error("Failed to create shadow map");
+
+	_renderHandle->bindPhysicalMemory(_imageHandle, MemoryPool::IMAGE_D16_BUFFER);
+
+	// Create image view
+	VkImageViewCreateInfo depthStencilView = {};
+	depthStencilView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	depthStencilView.pNext = nullptr;
+	depthStencilView.flags = 0;
+	depthStencilView.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	depthStencilView.format = VK_FORMAT_D16_UNORM;
+	depthStencilView.subresourceRange = {};
+	depthStencilView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+	depthStencilView.subresourceRange.baseMipLevel = 0;
+	depthStencilView.subresourceRange.levelCount = 1;
+	depthStencilView.subresourceRange.baseArrayLayer = 0;
+	depthStencilView.subresourceRange.layerCount = 1;
+	depthStencilView.image = _imageHandle;
+	if (vkCreateImageView(_renderHandle->getDevice(), &depthStencilView, nullptr, &imageInfo.imageView) != VK_SUCCESS)
+		throw std::runtime_error("Failed to create shadow map view");
+}
+
 void Texture2DVulkan::bind(VkCommandBuffer cmdBuf, unsigned int slot)
 {
 	//TODO rebind when sampler is changed...

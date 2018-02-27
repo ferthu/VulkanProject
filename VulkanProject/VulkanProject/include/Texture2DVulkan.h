@@ -19,6 +19,7 @@ public:
 	~Texture2DVulkan();
 
 	int loadFromFile(std::string filename);
+	void createShadowMap(uint32_t height, uint32_t width);
 	void bind(VkCommandBuffer cmdBuf, unsigned int slot);
 
 	VulkanRenderer *_renderHandle;
