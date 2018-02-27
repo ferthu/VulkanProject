@@ -128,6 +128,10 @@ void checkValidImageFormats(VkPhysicalDevice device);
 
 VkPresentModeKHR chooseSwapPresentMode(VkPhysicalDevice &device, VkSurfaceKHR &surface, VkPresentModeKHR *prefered_modes, size_t num_prefered);
 VkFramebuffer createFramebuffer(VkDevice device, VkRenderPass pass, VkExtent2D frameDim, VkImageView *attachments, uint32_t num_attachment);
+
+
+VkAttachmentDescription defineFramebufColor(VkFormat swapChainImgFormat);
+VkAttachmentDescription defineFramebufDepth(VkFormat depthImgFormat);
 VkRenderPass createRenderPass_SingleColor(VkDevice device, VkFormat swapChainImgFormat);
 VkRenderPass createRenderPass_SingleColorDepth(VkDevice device, VkFormat swapChainImgFormat, VkFormat depthFormat);
 

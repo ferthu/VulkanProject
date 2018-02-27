@@ -18,16 +18,21 @@ public:
 	virtual void frame(VkCommandBuffer cmdBuf);
 	virtual void initialize(VulkanRenderer *handle);
 	virtual void defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout);
-	virtual VkRenderPass defineRenderPass(VkFormat swapchainFormat, VkFormat depthFormat);
+	virtual VkRenderPass defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat);
 
 private:
 
-	void makeTechniqueA();
+	void makeTechnique();
 
-	ShaderVulkan *computeShader;
-
+	// Render pass
+	ShaderVulkan *triShader;
 	TechniqueVulkan * techniqueA;
+	VertexBufferVulkan* triBuffer;
+	VertexBufferVulkan::Binding triVertexBinding;
 
+	// Post pass
+	ShaderVulkan *computeShader;
+	TechniqueVulkan * techniquePost;
 	Sampler2DVulkan *readSampler;
 	Texture2DVulkan *readImg;
 };

@@ -37,10 +37,10 @@ void TriangleScene::initialize(VulkanRenderer *handle)
 	triVertexBinding = VertexBufferVulkan::Binding(triBuffer, sizeof(glm::vec4), NUM_TRIS * 3, 0);
 	triBuffer->setData(testTriangles, triVertexBinding.byteSize(), 0);
 
-	makeTechniqueA();
+	makeTechnique();
 }
 
-void TriangleScene::makeTechniqueA()
+void TriangleScene::makeTechnique()
 {
 
 	const uint32_t NUM_BUFFER = 1;
@@ -86,7 +86,7 @@ void TriangleScene::defineDescriptorLayout(VkDevice device, std::vector<VkDescri
 }
 
 
-VkRenderPass TriangleScene::defineRenderPass(VkFormat swapchainFormat, VkFormat depthFormat)
+VkRenderPass TriangleScene::defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat)
 {
-	return createRenderPass_SingleColorDepth(_renderHandle->getDevice(), swapchainFormat, depthFormat);
+	return createRenderPass_SingleColorDepth(device, swapchainFormat, depthFormat);
 }

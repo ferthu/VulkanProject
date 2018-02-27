@@ -258,7 +258,7 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	createDepthComponents();
 
 	// Create render pass
-	frameBufferPass = scene->defineRenderPass(swapchainCreateInfo.imageFormat, depthFormat);
+	frameBufferPass = scene->defineRenderPass(device, swapchainCreateInfo.imageFormat, depthFormat);
 	
 	// Create frame buffers.
 	const uint32_t NUM_FRAME_ATTACH = 2;
