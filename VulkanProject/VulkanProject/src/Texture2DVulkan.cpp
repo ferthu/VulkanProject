@@ -6,8 +6,8 @@
 #include "VulkanRenderer.h"
 #include<assert.h>
 
-Texture2DVulkan::Texture2DVulkan(VulkanRenderer *renderer)
-	: _renderHandle(renderer), _imageHandle(nullptr), imageInfo({NULL, NULL, VK_IMAGE_LAYOUT_UNDEFINED })
+Texture2DVulkan::Texture2DVulkan(VulkanRenderer *renderer, Sampler2DVulkan *sampler)
+	: _renderHandle(renderer), _samplerHandle(sampler), _imageHandle(nullptr), imageInfo({NULL, NULL, VK_IMAGE_LAYOUT_UNDEFINED })
 {
 	for (int i = 0; i < MAX_TEX_BINDINGS; i++)
 		slotBindings[i] = NULL;
@@ -71,7 +71,7 @@ int Texture2DVulkan::loadFromFile(std::string filename)
 	return 0;
 }
 
-void Texture2DVulkan::bind(unsigned int slot)
+void Texture2DVulkan::bind(VkCommandBuffer cmdBuf, unsigned int slot)
 {
 	//TODO rebind when sampler is changed...
 	if (!slotBindings[slot])
@@ -89,5 +89,5 @@ void Texture2DVulkan::bind(unsigned int slot)
 		vkUpdateDescriptorSets(_renderHandle->getDevice(), 1, writes, 0, nullptr);
 	}
 
-	vkCmdBindDescriptorSets(_renderHandle->getFrameCmdBuf(), VK_PIPELINE_BIND_POINT_GRAPHICS, _renderHandle->getPipelineLayout(), slot, 1, &slotBindings[slot], 0, nullptr);
+	vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, _renderHandle->getPipelineLayout(), slot, 1, &slotBindings[slot], 0, nullptr);
 }

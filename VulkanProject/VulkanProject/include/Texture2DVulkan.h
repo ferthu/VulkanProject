@@ -15,11 +15,11 @@ private:
 	VkDescriptorSet slotBindings[MAX_TEX_BINDINGS];
 
 public:
-	Texture2DVulkan(VulkanRenderer *renderer);
+	Texture2DVulkan(VulkanRenderer *renderer, Sampler2DVulkan *sampler);
 	~Texture2DVulkan();
 
 	int loadFromFile(std::string filename);
-	void bind(unsigned int slot);
+	void bind(VkCommandBuffer cmdBuf, unsigned int slot);
 
 	VulkanRenderer *_renderHandle;
 	Sampler2DVulkan *_samplerHandle;

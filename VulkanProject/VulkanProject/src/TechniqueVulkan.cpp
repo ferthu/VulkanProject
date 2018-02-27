@@ -5,10 +5,17 @@
 #include "VulkanConstruct.h"
 
 
+/* Generate a compute pipeline technique
+*/
+TechniqueVulkan::TechniqueVulkan(ShaderVulkan* sHandle, VulkanRenderer* renderer)
+	: _sHandle(sHandle), _renderHandle(renderer)
+{
+	createComputePipeline();
+}
 TechniqueVulkan::TechniqueVulkan(ShaderVulkan* sHandle, VulkanRenderer* renderer, VkRenderPass renderPass, VkPipelineVertexInputStateCreateInfo &vertexInputState)
 	: _sHandle(sHandle), _renderHandle(renderer), _passHandle(renderPass)
 {
-	createPipeline(vertexInputState);
+	createGraphicsPipeline(vertexInputState);
 }
 
 TechniqueVulkan::~TechniqueVulkan()
@@ -16,13 +23,12 @@ TechniqueVulkan::~TechniqueVulkan()
 	vkDestroyPipeline(_renderHandle->getDevice(), pipeline, nullptr);
 }
 
-void TechniqueVulkan::enable()
+void TechniqueVulkan::bind(VkCommandBuffer cmdBuf, VkPipelineBindPoint bindPoint)
 {
-	/* The render pipeline (includes RenderState) is set from the Vulkan Renderer.
-	*/
+	vkCmdBindPipeline(cmdBuf, bindPoint, pipeline);
 }
 
-void TechniqueVulkan::createPipeline(VkPipelineVertexInputStateCreateInfo &vertexInputState)
+void TechniqueVulkan::createGraphicsPipeline(VkPipelineVertexInputStateCreateInfo &vertexInputState)
 {
 	assert(_sHandle);
 	VkPipelineShaderStageCreateInfo stages[2];
@@ -85,7 +91,23 @@ void TechniqueVulkan::createPipeline(VkPipelineVertexInputStateCreateInfo &verte
 	VkResult err = vkCreateGraphicsPipelines(_renderHandle->getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 
 	if (err != VK_SUCCESS)
-		throw std::runtime_error("Failed to create pipeline.");
+		throw std::runtime_error("Failed to create graphics pipeline.");
 }
 
+void TechniqueVulkan::createComputePipeline()
+{
+	assert(_sHandle);
+	VkComputePipelineCreateInfo info;
+	info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+	info.pNext = NULL;
+	info.flags = 0;
+	info.stage = defineShaderStage(VK_SHADER_STAGE_COMPUTE_BIT, _sHandle->computeShader);
+	info.layout = _renderHandle->getPipelineLayout();
+	info.basePipelineHandle = NULL;
+	info.basePipelineIndex = 0;
+
+	VkResult err = vkCreateComputePipelines(_renderHandle->getDevice(), VK_NULL_HANDLE, 1, &info, NULL, &pipeline);
+	if (err != VK_SUCCESS)
+		throw std::runtime_error("Failed to create compute pipeline.");
+}
 

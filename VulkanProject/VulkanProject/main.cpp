@@ -3,12 +3,13 @@
 #include "glm\glm.hpp"
 #include "VulkanRenderer.h"
 #include "Scenes/TriangleScene.h"
+#include "Scenes/ComputeScene.h"
 #undef main
 
 int main(int argc, const char* argv)
 {
 	VulkanRenderer renderer;
-	renderer.initialize( new TriangleScene());
+	renderer.initialize( new ComputeScene(), 640, 640);
 
 	SDL_Event windowEvent;
 	while (true)
@@ -19,7 +20,6 @@ int main(int argc, const char* argv)
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_ESCAPE) break;
 		}
 		renderer.frame();
-		renderer.present();
 	}
 	
 	renderer.beginShutdown();
