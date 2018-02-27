@@ -51,13 +51,15 @@ public:
 	
 	void setWinTitle(const char* title);
 
-	int initialize(Scene *scene, unsigned int width = 640, unsigned int height = 480);
+	int initialize(Scene *scene, unsigned int width, unsigned int height);
 	void frame();
-	void present();
+	void present(bool waitRender, bool waitCompute);
 
 	// Initiate frame pass
 	void beginFramePass();
+	void beginCompute();
 	void submitFramePass();
+	void submitCompute();
 
 	virtual int beginShutdown();
 	int shutdown();
@@ -84,6 +86,7 @@ public:
 	*/
 	VkRenderPass getFramePass();
 	VkCommandBuffer getFrameCmdBuf();
+	VkCommandBuffer getComputeBuf();
 	uint32_t getFrameIndex() { return frameCycle; }
 	uint32_t getTransferIndex() { return !frameCycle; }
 
@@ -131,8 +134,8 @@ private:
 	VkPipelineLayout pipelineLayout;
 	std::vector<VkDescriptorSetLayout> descriptorLayouts;
 
-	VkSemaphore imageAvailableSemaphore;
-	VkSemaphore renderFinishedSemaphore;
+	VkSemaphore imageAvailable;
+	VkSemaphore renderFinished, computeFinished;
 	VkCommandBuffer _frameCmdBuf, _computeCmdBuf;
 	VkCommandBuffer _transferCmd[2];
 	VkFence			_transferFences[2];

@@ -150,6 +150,8 @@ VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, VkI
 VkSampler createSampler(VkDevice device, VkFilter magFilter = VK_FILTER_LINEAR, VkFilter minFilter = VK_FILTER_LINEAR, 
 	VkSamplerAddressMode wrap_s = VK_SAMPLER_ADDRESS_MODE_REPEAT, VkSamplerAddressMode wrap_t = VK_SAMPLER_ADDRESS_MODE_REPEAT);
 
+VkShaderModule createShaderModule(VkDevice dev, uint32_t *spv_code, size_t codeBytes);
+
 VkDeviceMemory allocPhysicalMemory(VkDevice device, VkPhysicalDevice physicalDevice, VkBuffer buffer, VkMemoryPropertyFlags properties, bool bindToBuffer = false);
 VkDeviceMemory allocPhysicalMemory(VkDevice device, VkPhysicalDevice physicalDevice, VkImage image, VkMemoryPropertyFlags properties, bool bindToImage = false);
 VkDeviceMemory allocPhysicalMemory(VkDevice device, VkPhysicalDevice physicalDevice, VkMemoryRequirements requirements, VkMemoryPropertyFlags properties);
@@ -994,6 +996,32 @@ VkSampler createSampler(VkDevice device, VkFilter magFilter, VkFilter minFilter,
 	}
 	return sampler;
 }
+
+/* Create a shader module.
+dev			<<	Device
+spv_code	<<	Spir-V code
+codeBytes	<<	The number of bytes in the spv_code param.
+return		>>	Shader module generated
+*/
+VkShaderModule createShaderModule(VkDevice dev, uint32_t *spv_code, size_t codeBytes)
+{
+	VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
+	shaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	shaderModuleCreateInfo.pNext = nullptr;
+	shaderModuleCreateInfo.flags = 0;
+	shaderModuleCreateInfo.codeSize = codeBytes;
+	shaderModuleCreateInfo.pCode = spv_code;
+
+	VkShaderModule shader;
+	VkResult result = vkCreateShaderModule(dev, &shaderModuleCreateInfo, nullptr, &shader);
+	if (result != VK_SUCCESS)
+	{
+		std::cout << "Failed to create shader module.\n";
+		throw std::runtime_error("Failed to create shader module.");
+	}
+	return shader;
+}
+
 /* Check for a list of image formats supported.
 */
 void checkValidImageFormats(VkPhysicalDevice device)

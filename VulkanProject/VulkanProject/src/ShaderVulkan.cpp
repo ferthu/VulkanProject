@@ -25,6 +25,8 @@ void ShaderVulkan::destroyShaderObjects()
 		vkDestroyShaderModule(_renderHandle->getDevice(), vertexShader, nullptr);
 	if (fragmentShader)
 		vkDestroyShaderModule(_renderHandle->getDevice(), fragmentShader, nullptr);
+	if (computeShader)
+		vkDestroyShaderModule(_renderHandle->getDevice(), computeShader, nullptr);
 }
 
 void ShaderVulkan::setShader(const std::string & shaderFileName, ShaderType type)
@@ -45,7 +47,35 @@ int ShaderVulkan::compileMaterial(std::string & errString)
 
 int ShaderVulkan::createShaders()
 {
+	auto it = shaderFileNames.find(ShaderType::CS);
+	if (it != shaderFileNames.end())
+		return createComputeShader();
+	else
+		return createPipeShader();
+}
+
+int ShaderVulkan::createComputeShader()
+{
+	std::vector<char> csData;
+
+	if (ends_with(shaderFileNames[ShaderVulkan::ShaderType::CS], ".spv"))
+		csData = loadSPIR_V(shaderFileNames[ShaderVulkan::ShaderType::CS]);
+	else
+	{
+		std::string tmpFile = assembleShader(ShaderVulkan::ShaderType::CS);
+		std::string spvFile = runCompiler(ShaderVulkan::ShaderType::CS, tmpFile);
+		csData = loadSPIR_V(spvFile);
+	}
+	computeShader = createShaderModule(_renderHandle->getDevice(), reinterpret_cast<uint32_t*>(csData.data()), csData.size());
+
+	return 0;
+}
+/* Create a combined vertex and pixel shader for rasterization pipeline
+*/
+int ShaderVulkan::createPipeShader()
+{
 	std::vector<char> vsData, fsData;
+
 
 	if (ends_with(shaderFileNames[ShaderVulkan::ShaderType::VS], ".spv"))
 		vsData = loadSPIR_V(shaderFileNames[ShaderVulkan::ShaderType::VS]);
@@ -55,7 +85,7 @@ int ShaderVulkan::createShaders()
 		std::string spvFile = runCompiler(ShaderVulkan::ShaderType::VS, tmpFile);
 		vsData = loadSPIR_V(spvFile);
 	}
-	
+
 	// 
 	if (ends_with(shaderFileNames[ShaderVulkan::ShaderType::PS], ".spv"))
 		fsData = loadSPIR_V(shaderFileNames[ShaderVulkan::ShaderType::PS]);
@@ -90,8 +120,8 @@ int ShaderVulkan::createShaders()
 	}
 	return 0;
 }
-
-const char *path = "resource\\";
+const char *path_exe = "resource\\";
+const char *path_tmp = "tmp\\";
 // Returns relative file path of created file
 std::string ShaderVulkan::assembleShader(ShaderVulkan::ShaderType type)
 {
@@ -101,6 +131,8 @@ std::string ShaderVulkan::assembleShader(ShaderVulkan::ShaderType type)
 		fileName = "VertexShader.glsl.vert";
 	else if (type == ShaderVulkan::ShaderType::PS)
 		fileName = "FragmentShader.glsl.frag";
+	else if (type == ShaderVulkan::ShaderType::CS)
+		fileName = "ComputeShader.glsl.comp";
 	else
 		throw std::runtime_error("Unsupported shader type!");
 
@@ -115,8 +147,11 @@ std::string ShaderVulkan::assembleShader(ShaderVulkan::ShaderType type)
 	else
 		throw std::runtime_error("Could not open shader file.");
 
+	std::string outFile = path_exe;
+	outFile.append(path_tmp);
+	outFile.append(fileName);
 	// Write complete shader into file
-	std::ofstream completeShader(path + fileName);
+	std::ofstream completeShader(outFile);
 	if (completeShader.is_open())
 	{
 		completeShader << "#version 450\n";
@@ -162,14 +197,29 @@ void printThreadError(const char *msg)
 std::string ShaderVulkan::runCompiler(ShaderVulkan::ShaderType type, std::string inputFileName)
 {
 	// pass defines
-	std::string commandLineStr;
+	std::string commandLineStr, fileName = path_tmp;
 	if (type == ShaderVulkan::ShaderType::VS)
-		commandLineStr.append("-v -V -o VertexShader.spv -e main ");
+	{
+		fileName += "VertexShader.spv";
+		char c = '"';
+		commandLineStr.append("-V -S vert -o \"" + fileName + "\" -e main ");
+	}
 	else if (type == ShaderVulkan::ShaderType::PS)
-		commandLineStr.append("-v -V -o FragmentShader.spv -e main ");
+	{
+		fileName += "FragmentShader.spv";
+		commandLineStr.append("-V -S frag -o \"" + fileName + "\" -e main ");
+	}
+	else if (type == ShaderVulkan::ShaderType::CS)
+	{
+		fileName += "ComputeShader.spv";
+		commandLineStr.append("-V -S comp -o \"" + fileName + "\" -e main ");
+	}
 
-	commandLineStr += "\"" + inputFileName + "\"";
+	commandLineStr += "\"";
+	commandLineStr.append(path_tmp);
+	commandLineStr += inputFileName + "\"";
 
+	//commandLineStr = "-V -S comp -o \"resource\\tmp\\ComputeShader.spv\" -e main \"resource\\tmp\\ComputeShader.glsl.comp\"";
 	LPSTR commandLine = const_cast<char *>(commandLineStr.c_str());
 	const char* lpDesk = "desktop";
 
@@ -193,10 +243,21 @@ std::string ShaderVulkan::runCompiler(ShaderVulkan::ShaderType type, std::string
 	startupInfo.hStdError = 0;
 	startupInfo.hStdOutput = 0;
 
-	LPSTARTUPINFOA startupInfoPointer = &startupInfo;
+	/* Stuff
 
+	// Running exe:
+	const DWORD len = MAX_PATH;
+	char pBuf[len];
+	int bytes = GetModuleFileName(NULL, pBuf, len);
+	std::cout << "Exe: " << pBuf << "\n";
+	// Working dir
+	TCHAR pwd[MAX_PATH];
+	GetCurrentDirectory(MAX_PATH, pwd);
+	std::cout << "Working dir: " << pwd << "\n";
+	*/
 	PROCESS_INFORMATION processInfo = {};
-	if (!CreateProcessA("resource\\glslangValidator.exe", commandLine, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, path, startupInfoPointer, &processInfo))
+
+	if (!CreateProcessA("resource\\glslangValidator.exe", commandLine, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, path_exe, &startupInfo, &processInfo))
 	{
 		//HRESULT res = HRESULT_FROM_WIN32(GetLastError());
 		std::cout << "Failed to start shader compilation process. Ensure 'resource\\glslangValidator.exe' exists.\n";
@@ -215,13 +276,17 @@ std::string ShaderVulkan::runCompiler(ShaderVulkan::ShaderType type, std::string
 		throw std::runtime_error("Could not get exit code from process.");
 	}
 	else
+	{
+		// Process exit message, should be zero
 		std::cout << "Process exited with msg: " << exitCode << "\n";
-
+		if(exitCode != 0)
+			std::cout << "\tWarning: Process error\n";
+	}
 	CloseHandle(processInfo.hProcess);
 	CloseHandle(processInfo.hThread);
 
-
-	return (type == ShaderVulkan::ShaderType::VS) ? "resource\\VertexShader.spv" : "resource\\FragmentShader.spv";
+	fileName = path_exe + fileName;
+	return fileName;
 }
 
 std::vector<char> ShaderVulkan::loadSPIR_V(std::string fileName)

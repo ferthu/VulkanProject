@@ -51,8 +51,7 @@ public:
 
 	int compileMaterial(std::string& errString);
 
-	VkShaderModule vertexShader;
-	VkShaderModule fragmentShader;
+	VkShaderModule vertexShader, fragmentShader, computeShader;
 	
 private:
 	std::string name;
@@ -62,6 +61,9 @@ private:
 	std::map<ShaderType, std::set<std::string>> shaderDefines;
 
 	int createShaders();
+	int createPipeShader();
+	int createComputeShader();
+
 	void destroyShaderObjects();
 	std::string assembleShader(ShaderType type);
 	std::string assembleDefines(ShaderType type);

@@ -5,6 +5,8 @@
 #include "glm\glm.hpp"
 #include "VertexBufferVulkan.h"
 #include "ShaderVulkan.h"
+#include "Texture2DVulkan.h"
+#include "Sampler2DVulkan.h"
 
 class ComputeScene :
 	public Scene
@@ -21,11 +23,11 @@ private:
 
 	void makeTechniqueA();
 
-	ShaderVulkan *triShader;
+	ShaderVulkan *computeShader;
 
 	TechniqueVulkan * techniqueA;
-	VertexBufferVulkan* triBuffer;
 
-	VertexBufferVulkan::Binding triVertexBinding;
+	Sampler2DVulkan *readSampler;
+	Texture2DVulkan *readImg;
 };
 
