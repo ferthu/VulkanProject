@@ -17,6 +17,7 @@ public:
 	virtual void frame(VkCommandBuffer cmdBuf);
 	virtual void initialize(VulkanRenderer *handle);
 	virtual void defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout);
+	virtual VkRenderPass defineRenderPass(VkFormat swapchainFormat, VkFormat depthFormat);
 
 private:
 

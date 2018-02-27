@@ -84,3 +84,9 @@ void TriangleScene::defineDescriptorLayout(VkDevice device, std::vector<VkDescri
 	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
 	layout[0] = createDescriptorLayout(device, &binding, 1);
 }
+
+
+VkRenderPass TriangleScene::defineRenderPass(VkFormat swapchainFormat, VkFormat depthFormat)
+{
+	return createRenderPass_SingleColorDepth(_renderHandle->getDevice(), swapchainFormat, depthFormat);
+}

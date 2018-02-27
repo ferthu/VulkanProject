@@ -24,6 +24,7 @@ VulkanRenderer::~VulkanRenderer() { }
 
 int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int height)
 {
+	this->scene = scene;
 	swapchainExtent.height = height;
 	swapchainExtent.width = width;
 
@@ -115,7 +116,7 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	// Find a suitable queue families
 	VkQueueFlags prefGraphQueue[] =
 	{
-		(VK_QUEUE_GRAPHICS_BIT)
+		(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT)
 	};
 	VkQueueFlags prefComputeQueue[] =
 	{
@@ -170,6 +171,10 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, windowSurface, &surfaceCapabilities);
 	if (err)
 		throw std::runtime_error("Failed to acquire surface capabilities...");
+	if (!hasFlag(surfaceCapabilities.supportedUsageFlags, VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT))
+		throw std::runtime_error("Swapchain images does not support storage...");
+	else
+		std::cout << "Swapchain storage supported!\n";
 
 	vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
 
@@ -218,7 +223,7 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	swapchainCreateInfo.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 	swapchainCreateInfo.imageExtent = swapchainExtent;
 	swapchainCreateInfo.imageArrayLayers = 1;
-	swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
 	swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	swapchainCreateInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 	swapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -253,7 +258,7 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	createDepthComponents();
 
 	// Create render pass
-	frameBufferPass = createRenderPass_SingleColorDepth(device, swapchainCreateInfo.imageFormat, depthFormat);
+	frameBufferPass = scene->defineRenderPass(swapchainCreateInfo.imageFormat, depthFormat);
 	
 	// Create frame buffers.
 	const uint32_t NUM_FRAME_ATTACH = 2;
@@ -290,7 +295,6 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	_computeCmdBuf = allocateCmdBuf(device, queues[QueueType::COMPUTE].pool);
 
 	// Our scene implementation
-	this->scene = scene;
 	scene->defineDescriptorLayout(device, descriptorLayouts);
 	generatePipelineLayout();
 	this->scene->initialize(this);
@@ -482,15 +486,15 @@ void VulkanRenderer::submitCompute()
 	}
 
 	// Submit
-	VkSemaphore waitSemaphores[] = { imageAvailable };
+	VkSemaphore waitSemaphores[] = { NULL };
 	VkSemaphore signalSemaphores[] = { computeFinished };
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = waitSemaphores;
-	submitInfo.pWaitDstStageMask = waitStages;		// Mask stage where related semaphore is waited for.
+	submitInfo.waitSemaphoreCount = 0;
+	submitInfo.pWaitSemaphores = NULL;
+	submitInfo.pWaitDstStageMask = 0;		// Mask stage where related semaphore is waited for.
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &_computeCmdBuf;
 	submitInfo.signalSemaphoreCount = 1;

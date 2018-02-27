@@ -202,24 +202,24 @@ std::string ShaderVulkan::runCompiler(ShaderVulkan::ShaderType type, std::string
 	{
 		fileName += "VertexShader.spv";
 		char c = '"';
-		commandLineStr.append("-V -S vert -o \"" + fileName + "\" -e main ");
+		commandLineStr.append(" -S vert -V -o \"" + fileName + "\" -e main ");
 	}
 	else if (type == ShaderVulkan::ShaderType::PS)
 	{
 		fileName += "FragmentShader.spv";
-		commandLineStr.append("-V -S frag -o \"" + fileName + "\" -e main ");
+		commandLineStr.append(" -S frag -V -o \"" + fileName + "\" -e main ");
 	}
 	else if (type == ShaderVulkan::ShaderType::CS)
 	{
 		fileName += "ComputeShader.spv";
-		commandLineStr.append("-V -S comp -o \"" + fileName + "\" -e main ");
+		commandLineStr.append(" -S comp -V -o \"" + fileName + "\" -e main ");
 	}
 
 	commandLineStr += "\"";
 	commandLineStr.append(path_tmp);
 	commandLineStr += inputFileName + "\"";
 
-	//commandLineStr = "-V -S comp -o \"resource\\tmp\\ComputeShader.spv\" -e main \"resource\\tmp\\ComputeShader.glsl.comp\"";
+	//commandLineStr = " -S comp -V -o \"resource\\tmp\\ComputeShader.spv\" -e main \"resource\\tmp\\ComputeShader.glsl.comp\"";
 	LPSTR commandLine = const_cast<char *>(commandLineStr.c_str());
 	const char* lpDesk = "desktop";
 
