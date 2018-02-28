@@ -30,12 +30,13 @@ enum MemoryPool
 	IMAGE_RGBA8_BUFFER = 2,	// GPU memory allocation to store image data.
 	VERTEX_BUFFER = 3,
 	INDEX_BUFFER = 4,
-	Count = 5
+	IMAGE_D16_BUFFER = 5,
+	Count = 6
 };
 
 const int MAX_DESCRIPTOR_POOLS = 12;
 // Size in bytes of the memory types used
-const uint32_t STORAGE_SIZE[(int)MemoryPool::Count] = { 2048 * 2048, 1024*1024, 1024 * 1024, 1024 * 1024, 1024 * 1024 };
+const uint32_t STORAGE_SIZE[(int)MemoryPool::Count] = { 2048 * 2048, 1024*1024, 1024 * 1024, 1024 * 1024, 1024 * 1024, 1024 * 1024 * 10 };
 
 
 class Scene;

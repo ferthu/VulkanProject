@@ -31,6 +31,8 @@ public:
 	/* Generate a descriptor at the specific attachment index.
 	*/
 	void attachBindPoint(uint32_t attachmentIndex, VkDescriptorSetLayout layout);
+	void createShadowMap(uint32_t height, uint32_t width);
+	void bind(VkCommandBuffer cmdBuf, unsigned int slot);
 
 	VulkanRenderer *_renderHandle;
 	Sampler2DVulkan *_samplerHandle;
