@@ -223,7 +223,7 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	swapchainCreateInfo.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 	swapchainCreateInfo.imageExtent = swapchainExtent;
 	swapchainCreateInfo.imageArrayLayers = 1;
-	swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
+	swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
 	swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	swapchainCreateInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 	swapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -287,6 +287,8 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 		= createDescriptorPoolSingle(device, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000);
 	descriptorPools[VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER]
 		= createDescriptorPoolSingle(device, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000);
+	descriptorPools[VkDescriptorType::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE]
+		= createDescriptorPoolSingle(device, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2000);
 
 	//Begin initial transfer command
 	_transferCmd[0] = allocateCmdBuf(device, queues[QueueType::MEM].pool);
@@ -296,7 +298,7 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 
 	// Our scene implementation
 	scene->defineDescriptorLayout(device, descriptorLayouts);
-	generatePipelineLayout();
+	pipelineLayout = createPipelineLayout(device, descriptorLayouts.data(), (uint32_t)descriptorLayouts.size());
 	this->scene->initialize(this);
 
 	beginCmdBuf(_transferCmd[getTransferIndex()]);
@@ -395,7 +397,7 @@ void VulkanRenderer::present(bool waitRender, bool waitCompute)
 	VkSwapchainKHR swapChains[] = { swapchain };
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = swapChains;
-	presentInfo.pImageIndices = &frameBufIndex;
+	presentInfo.pImageIndices = &swapChainImgIndex;
 	presentInfo.pResults = nullptr; // Optional
 	vkQueuePresentKHR(queues[QueueType::GRAPHIC].queue, &presentInfo);
 
@@ -428,7 +430,7 @@ void VulkanRenderer::beginFramePass()
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	renderPassInfo.renderPass = frameBufferPass;
-	renderPassInfo.framebuffer = swapChainFramebuffers[frameBufIndex];
+	renderPassInfo.framebuffer = swapChainFramebuffers[swapChainImgIndex];
 	renderPassInfo.renderArea.offset = { 0, 0 };
 	renderPassInfo.renderArea.extent = swapchainExtent;
 
@@ -486,18 +488,18 @@ void VulkanRenderer::submitCompute()
 	}
 
 	// Submit
-	VkSemaphore waitSemaphores[] = { NULL };
+	VkSemaphore waitSemaphores[] = { renderFinished };
 	VkSemaphore signalSemaphores[] = { computeFinished };
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.waitSemaphoreCount = 0;
-	submitInfo.pWaitSemaphores = NULL;
-	submitInfo.pWaitDstStageMask = 0;		// Mask stage where related semaphore is waited for.
+	submitInfo.waitSemaphoreCount = (uint32_t)std::size(waitSemaphores);
+	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.pWaitDstStageMask = waitStages;		// Mask stage where related semaphore is waited for.
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &_computeCmdBuf;
-	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.signalSemaphoreCount = (uint32_t)std::size(signalSemaphores);;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 	VkResult err = vkQueueSubmit(queues[QueueType::COMPUTE].queue, 1, &submitInfo, VK_NULL_HANDLE);
 	if (err != VK_SUCCESS) {
@@ -514,7 +516,7 @@ void VulkanRenderer::frame()
 	waitFence(device, _transferFences[getFrameIndex()]);
 
 	// Start rendering
-	vkAcquireNextImageKHR(device, swapchain, std::numeric_limits<uint64_t>::max(), imageAvailable, VK_NULL_HANDLE, &frameBufIndex);
+	vkAcquireNextImageKHR(device, swapchain, std::numeric_limits<uint64_t>::max(), imageAvailable, VK_NULL_HANDLE, &swapChainImgIndex);
 
 
 
@@ -528,10 +530,6 @@ void VulkanRenderer::frame()
 #pragma endregion
 
 
-void VulkanRenderer::generatePipelineLayout()
-{
-	pipelineLayout = createPipelineLayout(device, descriptorLayouts.data(), (uint32_t)descriptorLayouts.size());
-}
 
 void VulkanRenderer::createDepthComponents()
 {
@@ -596,6 +594,11 @@ VkDescriptorSet VulkanRenderer::generateDescriptor(VkDescriptorType type, uint32
 {
 	return createDescriptorSet(device, descriptorPools[type], &descriptorLayouts[set_binding]);
 }
+VkDescriptorSet VulkanRenderer::generateDescriptor(VkDescriptorType type, VkDescriptorSetLayout *layout)
+{
+	return createDescriptorSet(device, descriptorPools[type], layout);
+}
+
 
 
 void VulkanRenderer::transferBufferData(VkBuffer buffer, const void* data, size_t size, size_t offset)
@@ -721,6 +724,13 @@ void VulkanRenderer::transitionImageLayout(VkImage image, VkFormat format, VkIma
 		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_GENERAL) {
+		barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;	// Read & write to image.
+
+		sourceStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;	// Src. stage was dependent during the output stage of the hardware pipe.
+		destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;		// Memory access req. synchronization during compute execution.
+	}
 	else {
 		throw std::invalid_argument("unsupported layout transition!");
 	}
@@ -794,7 +804,7 @@ void VulkanRenderer::allocateImageMemory(MemoryPool type, VkImage &image, VkForm
 
 #pragma region Get & Set Stuff
 
-VkPipelineLayout VulkanRenderer::getPipelineLayout()
+VkPipelineLayout VulkanRenderer::getRenderPassLayout()
 {
 	return pipelineLayout;
 }
@@ -827,6 +837,14 @@ VkSurfaceFormatKHR VulkanRenderer::getSwapchainFormat()
 	return swapchainFormat;
 }
 
+VkImageView VulkanRenderer::getSwapChainView(uint32_t index)
+{
+	return swapchainImageViews[index];
+}
+VkImage VulkanRenderer::getSwapChainImg(uint32_t index)
+{
+	return swapchainImages[index];
+}
 unsigned int VulkanRenderer::getWidth()
 {
 	return swapchainExtent.width;

@@ -40,6 +40,12 @@ const uint32_t STORAGE_SIZE[(int)MemoryPool::Count] = { 2048 * 2048, 1024*1024, 
 
 class Scene;
 
+enum QueueType {
+	MEM = 0,
+	GRAPHIC = 1,
+	COMPUTE = 2,
+	COUNT = 3
+};
 // Set constant values for now
 
 class VulkanRenderer
@@ -74,6 +80,7 @@ public:
 	size_t bindPhysicalMemory(VkBuffer buffer, MemoryPool memPool);
 	size_t bindPhysicalMemory(VkImage img, MemoryPool pool);
 
+	VkDescriptorSet generateDescriptor(VkDescriptorType type, VkDescriptorSetLayout *layout);
 	VkDescriptorSet generateDescriptor(VkDescriptorType type, uint32_t set_binding);
 
 	/* Transfer data to the specific buffer. */
@@ -87,12 +94,18 @@ public:
 	VkRenderPass getFramePass();
 	VkCommandBuffer getFrameCmdBuf();
 	VkCommandBuffer getComputeBuf();
+	int getQueueFamily(QueueType queue) { return queues[queue].family; };
 	uint32_t getFrameIndex() { return frameCycle; }
 	uint32_t getTransferIndex() { return !frameCycle; }
-
+	/* Get the index of the current swap chain.
+	*/
+	uint32_t getSwapChainIndex() { return swapChainImgIndex; }
+	size_t getSwapChainLength() { return swapchainImages.size(); }
 
 	VkSurfaceFormatKHR getSwapchainFormat();
-	VkPipelineLayout getPipelineLayout();
+	VkImageView getSwapChainView(uint32_t index);
+	VkImage getSwapChainImg(uint32_t index);
+	VkPipelineLayout getRenderPassLayout();
 
 	unsigned int getWidth();
 	unsigned int getHeight();
@@ -139,7 +152,7 @@ private:
 	VkCommandBuffer _frameCmdBuf, _computeCmdBuf;
 	VkCommandBuffer _transferCmd[2];
 	VkFence			_transferFences[2];
-	uint32_t frameBufIndex;								// Tracks frame buffer index for current frame
+	uint32_t swapChainImgIndex;								// Tracks frame buffer index for current frame
 	uint32_t frameCycle = 0, stagingCycleOffset = 0;	// Tracks transfer cycle
 	bool firstFrame = 1;
 	/*
@@ -148,12 +161,6 @@ private:
 	
 	VkBuffer stagingBuffer;			// Buffer to temporarily hold data being transferred to GPU
 
-	enum QueueType {
-		MEM = 0,
-		GRAPHIC = 1,
-		COMPUTE = 2,
-		COUNT = 3
-	};
 	vk::QueueConstruct queues;
 
 	VkSurfaceFormatKHR swapchainFormat;
@@ -167,6 +174,5 @@ private:
 
 	void nextFrame();
 
-	void generatePipelineLayout();
 	void createDepthComponents();
 };

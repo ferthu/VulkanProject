@@ -31,9 +31,11 @@ private:
 	VertexBufferVulkan::Binding triVertexBinding;
 
 	// Post pass
-	ShaderVulkan *computeShader;
 	TechniqueVulkan * techniquePost;
+	vk::LayoutConstruct postLayout;
+	ShaderVulkan *computeShader;
 	Sampler2DVulkan *readSampler;
 	Texture2DVulkan *readImg;
+	std::vector<VkDescriptorSet> swapChainImgDesc;
 };
 

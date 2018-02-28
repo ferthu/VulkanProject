@@ -48,7 +48,7 @@ void ConstantBufferVulkan::setData(const void * data, size_t size, unsigned int 
 
 void ConstantBufferVulkan::bind()
 {
-	vkCmdBindDescriptorSets(_renderHandle->getFrameCmdBuf(), VK_PIPELINE_BIND_POINT_GRAPHICS, _renderHandle->getPipelineLayout(), location, 1, &descriptor, 0, nullptr);
+	vkCmdBindDescriptorSets(_renderHandle->getFrameCmdBuf(), VK_PIPELINE_BIND_POINT_GRAPHICS, _renderHandle->getRenderPassLayout(), location, 1, &descriptor, 0, nullptr);
 }
 
 #pragma endregion
@@ -113,7 +113,7 @@ void ConstantDoubleBufferVulkan::setData(const void * data, size_t size, unsigne
 
 void ConstantDoubleBufferVulkan::bind()
 {
-	vkCmdBindDescriptorSets(_renderHandle->getFrameCmdBuf(), VK_PIPELINE_BIND_POINT_GRAPHICS, _renderHandle->getPipelineLayout(), location, 1, &descriptor[_renderHandle->getFrameIndex()], 0, nullptr);
+	vkCmdBindDescriptorSets(_renderHandle->getFrameCmdBuf(), VK_PIPELINE_BIND_POINT_GRAPHICS, _renderHandle->getRenderPassLayout(), location, 1, &descriptor[_renderHandle->getFrameIndex()], 0, nullptr);
 }
 
 #pragma endregion
