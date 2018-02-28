@@ -6,8 +6,6 @@ Fix fps display (in window description)
 
 Issues:
 
-Removed resource/tmp directory files from git (if crash check that it exists:S)
-
 If 
 
 Good practices when working here:
