@@ -2,7 +2,7 @@ Todo:
 
 /M
 Begin construction of the final compute experiment.
-
+Fix fps display (in window description)
 
 Issues:
 
