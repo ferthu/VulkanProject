@@ -7,12 +7,12 @@
 
 /* Generate a compute pipeline technique
 */
-TechniqueVulkan::TechniqueVulkan(ShaderVulkan* sHandle, VulkanRenderer* renderer)
+TechniqueVulkan::TechniqueVulkan(VulkanRenderer* renderer, ShaderVulkan* sHandle, VkPipelineLayout layout)
 	: _sHandle(sHandle), _renderHandle(renderer)
 {
-	createComputePipeline();
+	createComputePipeline(layout);
 }
-TechniqueVulkan::TechniqueVulkan(ShaderVulkan* sHandle, VulkanRenderer* renderer, VkRenderPass renderPass, VkPipelineVertexInputStateCreateInfo &vertexInputState)
+TechniqueVulkan::TechniqueVulkan( VulkanRenderer* renderer, ShaderVulkan* sHandle, VkRenderPass renderPass, VkPipelineVertexInputStateCreateInfo &vertexInputState)
 	: _sHandle(sHandle), _renderHandle(renderer), _passHandle(renderPass)
 {
 	createGraphicsPipeline(vertexInputState);
@@ -82,7 +82,7 @@ void TechniqueVulkan::createGraphicsPipeline(VkPipelineVertexInputStateCreateInf
 	pipelineInfo.pDepthStencilState = &depthStencil;
 	pipelineInfo.pColorBlendState = &pipelineColorBlendStateCreateInfo;
 	pipelineInfo.pDynamicState = nullptr;
-	pipelineInfo.layout = _renderHandle->getPipelineLayout();
+	pipelineInfo.layout = _renderHandle->getRenderPassLayout();
 	pipelineInfo.renderPass = _passHandle;
 	pipelineInfo.subpass = 0;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -94,7 +94,7 @@ void TechniqueVulkan::createGraphicsPipeline(VkPipelineVertexInputStateCreateInf
 		throw std::runtime_error("Failed to create graphics pipeline.");
 }
 
-void TechniqueVulkan::createComputePipeline()
+void TechniqueVulkan::createComputePipeline(VkPipelineLayout layout)
 {
 	assert(_sHandle);
 	VkComputePipelineCreateInfo info;
@@ -102,7 +102,7 @@ void TechniqueVulkan::createComputePipeline()
 	info.pNext = NULL;
 	info.flags = 0;
 	info.stage = defineShaderStage(VK_SHADER_STAGE_COMPUTE_BIT, _sHandle->computeShader);
-	info.layout = _renderHandle->getPipelineLayout();
+	info.layout = layout;
 	info.basePipelineHandle = NULL;
 	info.basePipelineIndex = 0;
 

@@ -110,23 +110,27 @@ void Texture2DVulkan::createShadowMap(uint32_t height, uint32_t width)
 		throw std::runtime_error("Failed to create shadow map view");
 }
 
-void Texture2DVulkan::bind(VkCommandBuffer cmdBuf, unsigned int slot)
+
+void Texture2DVulkan::attachBindPoint(uint32_t attachmentIndex, VkDescriptorSetLayout layout)
 {
-	//TODO rebind when sampler is changed...
-	if (!slotBindings[slot])
-	{
-		assert(_samplerHandle);
-		if (!slotBindings[slot])
-			// Descriptor
-			slotBindings[slot] = _renderHandle->generateDescriptor(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, slot);
+	if (!slotBindings[attachmentIndex])
+		// Descriptor
+		slotBindings[attachmentIndex] = _renderHandle->generateDescriptor(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &layout);
 
-		/* This code is broken, can't update descriptor when bound. Works as the texture is only bound to one slot/layout.
-		*/
-		imageInfo.sampler = _samplerHandle->_sampler;
-		VkWriteDescriptorSet writes[1];
-		writeDescriptorStruct_IMG_COMBINED(writes[0], slotBindings[slot], 0, 0, 1, &imageInfo);
-		vkUpdateDescriptorSets(_renderHandle->getDevice(), 1, writes, 0, nullptr);
-	}
+	imageInfo.sampler = _samplerHandle->_sampler;
+	VkWriteDescriptorSet writes[1];
+	writeDescriptorStruct_IMG_COMBINED(writes[0], slotBindings[attachmentIndex], 0, 0, 1, &imageInfo);
+	vkUpdateDescriptorSets(_renderHandle->getDevice(), 1, writes, 0, nullptr);
 
-	vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, _renderHandle->getPipelineLayout(), slot, 1, &slotBindings[slot], 0, nullptr);
+}
+
+void Texture2DVulkan::bind(VkCommandBuffer cmdBuf, uint32_t indexCombined, VkPipelineLayout layout, VkPipelineBindPoint pipeBinding)
+{
+	assert(slotBindings[indexCombined] != NULL);
+	vkCmdBindDescriptorSets(cmdBuf, pipeBinding, layout, indexCombined, 1, &slotBindings[indexCombined], 0, nullptr);
+}
+void Texture2DVulkan::bind(VkCommandBuffer cmdBuf, uint32_t attachmentIndex, uint32_t setIndex, VkPipelineLayout layout, VkPipelineBindPoint pipeBinding)
+{
+	assert(slotBindings[attachmentIndex] != NULL);
+	vkCmdBindDescriptorSets(cmdBuf, pipeBinding, layout, setIndex, 1, &slotBindings[attachmentIndex], 0, nullptr);
 }

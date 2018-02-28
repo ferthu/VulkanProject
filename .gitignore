@@ -3,6 +3,11 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# Custom
+
+VulkanProject/VulkanProject/resource/tmp/*
+
+
 # User-specific files
 *.suo
 *.user

@@ -92,6 +92,22 @@ namespace vk
 		QueueRef& operator[](uint32_t index);
 		size_t size();
 	};
+
+
+	struct LayoutConstruct
+	{
+	public:
+		VkPipelineLayout _layout;
+		VkDescriptorSetLayout * _desc;
+		uint32_t _numLayouts;
+
+		LayoutConstruct();
+		LayoutConstruct(uint32_t numDescriptions);
+		~LayoutConstruct();
+		void construct(VkDevice dev);
+		void destroy(VkDevice dev);
+		VkDescriptorSetLayout& operator[](uint32_t index);
+	};
 }
 #pragma endregion
 
@@ -140,12 +156,13 @@ VkFormat findDepthFormat(VkPhysicalDevice physDevice);
 bool hasStencilComponent(VkFormat format);
 
 
-
-/* Memory */
+/* Buffers*/
 
 VkBuffer createBuffer(VkDevice device, size_t byte_size, VkBufferUsageFlags usage, uint32_t queueCount = 0, uint32_t *queueFamilyIndices = nullptr);
 VkVertexInputBindingDescription defineVertexBinding(uint32_t bind_index, uint32_t vertex_bytes, VkVertexInputRate inputRate = VK_VERTEX_INPUT_RATE_VERTEX);
 VkVertexInputAttributeDescription defineVertexAttribute(uint32_t bind_index, uint32_t loc_index, VkFormat format, uint32_t attri_offset);
+
+/* Image */
 
 VkImage createTexture2D(VkDevice device, uint32_t width, uint32_t height, VkFormat format = VK_FORMAT_R8G8B8A8_UNORM, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL);
 VkImage createDepthBuffer(VkDevice device, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL);
@@ -154,7 +171,15 @@ VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, VkI
 VkSampler createSampler(VkDevice device, VkFilter magFilter = VK_FILTER_LINEAR, VkFilter minFilter = VK_FILTER_LINEAR, 
 	VkSamplerAddressMode wrap_s = VK_SAMPLER_ADDRESS_MODE_REPEAT, VkSamplerAddressMode wrap_t = VK_SAMPLER_ADDRESS_MODE_REPEAT);
 
+//Transitions, should prob. be moved.
+void transition_PostToPresent(VkCommandBuffer cmdBuf, VkImage img, int srcQueueFamily, int dstQueueFamily);
+void transition_ComputeToPost(VkCommandBuffer cmdBuf, VkImage img, int srcQueueFamily, int dstQueueFamily);
+
+/* Shader */
+
 VkShaderModule createShaderModule(VkDevice dev, uint32_t *spv_code, size_t codeBytes);
+
+/* Memory */
 
 VkDeviceMemory allocPhysicalMemory(VkDevice device, VkPhysicalDevice physicalDevice, VkBuffer buffer, VkMemoryPropertyFlags properties, bool bindToBuffer = false);
 VkDeviceMemory allocPhysicalMemory(VkDevice device, VkPhysicalDevice physicalDevice, VkImage image, VkMemoryPropertyFlags properties, bool bindToImage = false);
@@ -169,15 +194,20 @@ void endSingleCommand(VkDevice device, VkQueue queue, VkCommandBuffer commandBuf
 void endSingleCommand_Wait(VkDevice device, VkQueue queue, VkCommandPool commandPool, VkCommandBuffer commandBuf);
 void releaseCommandBuffer(VkDevice device, VkQueue queue, VkCommandPool commandPool, VkCommandBuffer commandBuf);
 
+// Add pipeline barrier for an image transition
+void cmdImageTransition(VkCommandBuffer cmdBuf, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage, VkImageMemoryBarrier &barrier);
+
+/* Synchronization */
+
 VkSemaphore createSemaphore(VkDevice device);
 VkFence createFence(VkDevice device, bool signaled = false);
 void waitFence(VkDevice device, VkFence fence);
 
 #pragma region Descriptors
 
-/* Fill a VkWriteDescriptorSet with VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER write info.
-*/
+void writeDescriptorStruct_IMG(VkWriteDescriptorSet &writeInfo, VkDescriptorSet dstSet, uint32_t dstBinding, uint32_t dstArrayElem, uint32_t descriptorCount, VkDescriptorType type, VkDescriptorImageInfo *imageInfo);
 void writeDescriptorStruct_IMG_COMBINED(VkWriteDescriptorSet &writeInfo, VkDescriptorSet dstSet, uint32_t dstBinding, uint32_t dstArrayElem, uint32_t descriptorCount, VkDescriptorImageInfo *imageInfo);
+void writeDescriptorStruct_IMG_STORAGE(VkWriteDescriptorSet &writeInfo, VkDescriptorSet dstSet, uint32_t dstBinding, uint32_t dstArrayElem, uint32_t descriptorCount, VkDescriptorImageInfo *imageInfo);
 /* Fill a VkWriteDescriptorSet with VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER write info.
 */
 void writeDescriptorStruct_UNI_BUFFER(VkWriteDescriptorSet &writeInfo, VkDescriptorSet dstSet, uint32_t dstBinding, uint32_t dstArrayElem, uint32_t descriptorCount, VkDescriptorBufferInfo* bufferInfo);
@@ -227,6 +257,7 @@ VkPipelineVertexInputStateCreateInfo defineVertexBufferBindings(
 
 #pragma endregion
 
+//#define VULKAN_DEVICE_IMPLEMENTATION
 #ifdef VULKAN_DEVICE_IMPLEMENTATION
 #include <iostream>
 #include <map>
@@ -335,6 +366,34 @@ namespace vk
 		return _queues[index];
 	}
 	size_t QueueConstruct::size() { return _queues.size(); }
+
+
+
+	LayoutConstruct::LayoutConstruct()
+		: _desc(NULL), _numLayouts(0)
+	{	}
+	LayoutConstruct::LayoutConstruct(uint32_t numDescriptions)
+		: _desc(new VkDescriptorSetLayout[numDescriptions]), _numLayouts(numDescriptions)
+	{
+	}
+	void LayoutConstruct::construct(VkDevice dev)
+	{
+		_layout = createPipelineLayout(dev, _desc, _numLayouts);
+	}
+	void LayoutConstruct::destroy(VkDevice dev)
+	{
+		vkDestroyPipelineLayout(dev, _layout, nullptr);
+		for (uint32_t i = 0; i < _numLayouts; i++)
+			vkDestroyDescriptorSetLayout(dev, _desc[i], nullptr);
+	}
+	LayoutConstruct::~LayoutConstruct()
+	{
+		// No device...
+	}
+	VkDescriptorSetLayout& LayoutConstruct::operator[](uint32_t index)
+	{
+		return _desc[index];
+	}
 }
 #pragma endregion
 
@@ -1001,6 +1060,53 @@ VkSampler createSampler(VkDevice device, VkFilter magFilter, VkFilter minFilter,
 	return sampler;
 }
 
+void transition_ComputeToPost(VkCommandBuffer cmdBuf, VkImage img, int srcQueueFamily, int dstQueueFamily)
+{
+	VkPipelineStageFlags sourceStage;
+	VkPipelineStageFlags destinationStage;
+	sourceStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;	// Src. stage was dependent during the output stage of the hardware pipe.
+	destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;		// Memory access req. synchronization during compute execution.
+	VkImageMemoryBarrier barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+	barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+	barrier.srcQueueFamilyIndex = srcQueueFamily;
+	barrier.dstQueueFamilyIndex = dstQueueFamily;
+	barrier.image = img;
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+
+	cmdImageTransition(cmdBuf, sourceStage, destinationStage, barrier);
+}
+void transition_PostToPresent(VkCommandBuffer cmdBuf, VkImage img, int srcQueueFamily, int dstQueueFamily)
+{
+	VkPipelineStageFlags sourceStage;
+	VkPipelineStageFlags destinationStage;
+	sourceStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+	destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	VkImageMemoryBarrier barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+	barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+	barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	barrier.srcQueueFamilyIndex = srcQueueFamily;
+	barrier.dstQueueFamilyIndex = dstQueueFamily;
+	barrier.image = img;
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+
+	cmdImageTransition(cmdBuf, sourceStage, destinationStage, barrier);
+}
+
 /* Create a shader module.
 dev			<<	Device
 spv_code	<<	Spir-V code
@@ -1251,6 +1357,20 @@ void releaseCommandBuffer(VkDevice device, VkQueue queue, VkCommandPool commandP
 }
 
 
+/* Add pipeline barrier for an image transition
+*/
+void cmdImageTransition(VkCommandBuffer cmdBuf, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage, VkImageMemoryBarrier &barrier)
+{
+	vkCmdPipelineBarrier(
+		cmdBuf,
+		sourceStage, destinationStage,
+		0,
+		0, nullptr,
+		0, nullptr,
+		1, &barrier
+	);
+}
+
 #pragma endregion
 
 #pragma region Descriptors
@@ -1261,16 +1381,17 @@ dstSet			<<	Destination descriptor set (set updated)
 dstBinding		<<	Descriptor binding within the set that is updated.
 dstArrayElement	<<	Destination element within the array.
 descriptorCount	<<	Number of descriptors updated (number of elements in the imageInfo array)
+type			<<	Descriptor type, the type should fit image definitions
 imageInfo		<<	Array of ImageInfo updated within the descriptor set.
 */
-void writeDescriptorStruct_IMG_COMBINED(VkWriteDescriptorSet &writeInfo, VkDescriptorSet dstSet, uint32_t dstBinding, uint32_t dstArrayElem, uint32_t descriptorCount, VkDescriptorType type, VkDescriptorImageInfo *imageInfo)
+void writeDescriptorStruct_IMG(VkWriteDescriptorSet &writeInfo, VkDescriptorSet dstSet, uint32_t dstBinding, uint32_t dstArrayElem, uint32_t descriptorCount, VkDescriptorType type, VkDescriptorImageInfo *imageInfo)
 {
 	writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	writeInfo.dstSet = dstSet;
 	writeInfo.dstBinding = dstBinding;
 	writeInfo.dstArrayElement = dstArrayElem;
 	writeInfo.descriptorCount = descriptorCount;
-	writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	writeInfo.descriptorType = type;
 	writeInfo.pImageInfo = imageInfo;
 	writeInfo.pBufferInfo = nullptr;
 	writeInfo.pTexelBufferView = nullptr;
@@ -1292,6 +1413,27 @@ void writeDescriptorStruct_IMG_COMBINED(VkWriteDescriptorSet &writeInfo, VkDescr
 	writeInfo.dstArrayElement = dstArrayElem;
 	writeInfo.descriptorCount = descriptorCount;
 	writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	writeInfo.pImageInfo = imageInfo;
+	writeInfo.pBufferInfo = nullptr;
+	writeInfo.pTexelBufferView = nullptr;
+}
+/* Fill a VkWriteDescriptorSet with VK_DESCRIPTOR_TYPE_STORAGE_IMAGE write info.
+writeInfo		<<	Struct filled with the params.
+dstSet			<<	Destination descriptor set (set updated)
+dstBinding		<<	Descriptor binding within the set that is updated.
+dstArrayElement	<<	Destination element within the array.
+descriptorCount	<<	Number of descriptors updated (number of elements in the imageInfo array)
+imageInfo		<<	Array of VkDescriptorImageInfo updated within the descriptor set.
+descriptorType	<<	Descriptor type written
+*/
+void writeDescriptorStruct_IMG_STORAGE(VkWriteDescriptorSet &writeInfo, VkDescriptorSet dstSet, uint32_t dstBinding, uint32_t dstArrayElem, uint32_t descriptorCount, VkDescriptorImageInfo *imageInfo)
+{
+	writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	writeInfo.dstSet = dstSet;
+	writeInfo.dstBinding = dstBinding;
+	writeInfo.dstArrayElement = dstArrayElem;
+	writeInfo.descriptorCount = descriptorCount;
+	writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 	writeInfo.pImageInfo = imageInfo;
 	writeInfo.pBufferInfo = nullptr;
 	writeInfo.pTexelBufferView = nullptr;

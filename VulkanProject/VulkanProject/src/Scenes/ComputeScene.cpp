@@ -18,6 +18,7 @@ ComputeScene::~ComputeScene()
 	delete computeShader;
 	delete readImg;
 	delete readSampler;
+	postLayout.destroy(_renderHandle->getDevice());
 }
 
 void ComputeScene::initialize(VulkanRenderer *handle)
@@ -44,6 +45,18 @@ void ComputeScene::initialize(VulkanRenderer *handle)
 	triBuffer->setData(testTriangles, triVertexBinding.byteSize(), 0);
 
 	// Post pass initiation
+
+	//Layout
+	VkDescriptorSetLayoutBinding binding;
+	postLayout = vk::LayoutConstruct(2);
+	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT);
+	postLayout[0] = createDescriptorLayout(_renderHandle->getDevice(), &binding, 1);
+	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT);
+	postLayout[1] = createDescriptorLayout(_renderHandle->getDevice(), &binding, 1);
+	// Gen. layout
+	postLayout.construct(_renderHandle->getDevice());
+
+
 	computeShader = new ShaderVulkan("CopyCompute", _renderHandle);
 	computeShader->setShader("resource/Compute/CopyTexture.glsl", ShaderVulkan::ShaderType::CS);
 	computeShader->compileMaterial(err);
@@ -55,14 +68,28 @@ void ComputeScene::initialize(VulkanRenderer *handle)
 	readSampler->setMinFilter(VkFilter::VK_FILTER_NEAREST);
 	readImg = new Texture2DVulkan(_renderHandle, readSampler);
 	readImg->loadFromFile("resource/fatboy.png");
+	readImg->attachBindPoint(0, postLayout[0]);
+
+	swapChainImgDesc.resize(_renderHandle->getSwapChainLength());
+	VkDescriptorImageInfo imgInfo[5];
+	VkWriteDescriptorSet writeInfo[5];
+	for (size_t i = 0; i < swapChainImgDesc.size(); i++)
+	{
+		imgInfo[i].sampler = NULL;
+		imgInfo[i].imageView = _renderHandle->getSwapChainView(i);
+		imgInfo[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		swapChainImgDesc[i] = _renderHandle->generateDescriptor(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, postLayout._desc + 1);
+		writeDescriptorStruct_IMG_STORAGE(writeInfo[i], swapChainImgDesc[i], 0, 0, 1, imgInfo + i);
+	}
+	vkUpdateDescriptorSets(_renderHandle->getDevice(), (uint32_t)swapChainImgDesc.size(), writeInfo, 0, nullptr);
 
 	makeTechnique();
 }
 
 void ComputeScene::makeTechnique()
 {
-	techniquePost = new TechniqueVulkan(computeShader, _renderHandle);
 
+	techniquePost = new TechniqueVulkan(_renderHandle, computeShader, postLayout._layout);
 
 	const uint32_t NUM_BUFFER = 1;
 	const uint32_t NUM_ATTRI = 1;
@@ -80,9 +107,8 @@ void ComputeScene::makeTechnique()
 	};
 	VkPipelineVertexInputStateCreateInfo vertexBindings =
 		defineVertexBufferBindings(vertexBufferBindings, NUM_BUFFER, vertexAttributes, NUM_ATTRI);
-	techniqueA = new TechniqueVulkan(triShader, _renderHandle, _renderHandle->getFramePass(), vertexBindings);
+	techniqueA = new TechniqueVulkan(_renderHandle, triShader, _renderHandle->getFramePass(), vertexBindings);
 }
-
 void ComputeScene::frame(VkCommandBuffer cmdBuf)
 {
 
@@ -95,27 +121,37 @@ void ComputeScene::frame(VkCommandBuffer cmdBuf)
 	triVertexBinding.bind(0);
 	vkCmdDraw(cmdBuf, (uint32_t)triVertexBinding.numElements, 1, 0, 0);
 
-	// Post pass
-	vkCmdNextSubpass(cmdBuf, VK_SUBPASS_CONTENTS_INLINE); // Subpass is inlined in primary command buffer
-	techniqueA->bind(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS);
-	readImg->bind(cmdBuf, 0);
+	// Subpass...
+	//vkCmdNextSubpass(cmdBuf, VK_SUBPASS_CONTENTS_INLINE); // Subpass is inlined in primary command buffer
 
-	//vkCmdDispatch(commandBuffer, bufferSize / sizeof(int32_t), 1, 1);
-	//...
+	// Finish
 	_renderHandle->submitFramePass();
 
-	_renderHandle->present(true, false);
+
+	// Post pass
+	VkCommandBuffer compBuf = _renderHandle->getComputeBuf();
+	uint32_t swapIndex = _renderHandle->getSwapChainIndex();
+	_renderHandle->beginCompute();
+	transition_ComputeToPost(compBuf, _renderHandle->getSwapChainImg(swapIndex), _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
+
+	// Bind compute shader
+	techniquePost->bind(compBuf, VK_PIPELINE_BIND_POINT_COMPUTE);
+	// Bind resources
+ 	readImg->bind(compBuf, 0, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
+	vkCmdBindDescriptorSets(compBuf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 1, 1, &swapChainImgDesc[swapIndex], 0, nullptr);
+	// Dispatch
+	uint32_t dim = 512 / 16;
+	vkCmdDispatch(compBuf, dim, dim, 1);
+	transition_PostToPresent(compBuf, _renderHandle->getSwapChainImg(swapIndex), _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
+	_renderHandle->submitCompute();
+	
+	_renderHandle->present(false, true);
 }
 
 
 void ComputeScene::defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout)
 {
-	layout.resize(2);
-	VkDescriptorSetLayoutBinding binding, binding2;
-	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT);
-	writeLayoutBinding(binding2, 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT);
-	layout[0] = createDescriptorLayout(device, &binding, 1);
-	layout[1] = createDescriptorLayout(device, &binding2, 1);
+	layout.resize(0);
 }
 
 
@@ -134,7 +170,11 @@ VkRenderPass ComputeScene::defineRenderPass(VkDevice device, VkFormat swapchainF
 	depthAttachmentRef.attachment = 1;
 	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-	const uint32_t NUM_SUBPASS = 2;
+	VkAttachmentReference postAttachmentRef = {};
+	postAttachmentRef.attachment = 0;
+	postAttachmentRef.layout = VK_IMAGE_LAYOUT_GENERAL;
+
+	const uint32_t NUM_SUBPASS = 1;
 	VkSubpassDescription subpass[NUM_SUBPASS];
 	subpass[0].flags = 0;
 	subpass[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -146,19 +186,18 @@ VkRenderPass ComputeScene::defineRenderPass(VkDevice device, VkFormat swapchainF
 	subpass[0].pDepthStencilAttachment = &depthAttachmentRef;
 	subpass[0].preserveAttachmentCount = 0;
 
+
 	// Technically there would proably be some nifty way of preserving some state...
+	/*
 	subpass[1].flags = 0;
 	subpass[1].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS; // Must be bind point GRAPHICS... VK_PIPELINE_BIND_POINT_COMPUTE not 'supported'
 	subpass[1].inputAttachmentCount = 0;
 	subpass[1].pInputAttachments = NULL;
-	subpass[1].colorAttachmentCount = 0;
-	subpass[1].pColorAttachments = NULL;
-	subpass[1].pResolveAttachments = NULL;
-	subpass[1].pDepthStencilAttachment = NULL;
-	subpass[1].preserveAttachmentCount = 0;
+	...
+	*/
 
 	// Specify dependency for transitioning the image layout for rendering. 
-	const uint32_t NUM_DEPENDENCY = 2;
+	const uint32_t NUM_DEPENDENCY = 1;
 	VkSubpassDependency dependency[NUM_DEPENDENCY];
 	dependency[0].srcSubpass = VK_SUBPASS_EXTERNAL;
 	dependency[0].dstSubpass = 0;
@@ -169,14 +208,12 @@ VkRenderPass ComputeScene::defineRenderPass(VkDevice device, VkFormat swapchainF
 	dependency[0].dependencyFlags = 0;
 
 	// Transition post pass
+	/*
 	dependency[1].srcSubpass = 0;
 	dependency[1].dstSubpass = 1;
 	dependency[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency[1].srcAccessMask = 0;
-	dependency[1].dstStageMask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-	dependency[1].dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-	dependency[1].dependencyFlags = 0;
-
+	...
+	*/
 	VkRenderPassCreateInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	renderPassInfo.attachmentCount = num_attach;

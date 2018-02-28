@@ -9,7 +9,7 @@
 int main(int argc, const char* argv)
 {
 	VulkanRenderer renderer;
-	renderer.initialize( new ComputeScene(), 640, 640);
+	renderer.initialize( new ComputeScene(), 512, 512);
 
 	SDL_Event windowEvent;
 	while (true)

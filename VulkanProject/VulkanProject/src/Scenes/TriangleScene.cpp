@@ -59,7 +59,7 @@ void TriangleScene::makeTechnique()
 	};
 	VkPipelineVertexInputStateCreateInfo vertexBindings =
 		defineVertexBufferBindings(vertexBufferBindings, NUM_BUFFER, vertexAttributes, NUM_ATTRI);
-	techniqueA = new TechniqueVulkan(triShader, _renderHandle, _renderHandle->getFramePass(), vertexBindings);
+	techniqueA = new TechniqueVulkan(_renderHandle, triShader, _renderHandle->getFramePass(), vertexBindings);
 }
 
 void TriangleScene::frame(VkCommandBuffer cmdBuf)
