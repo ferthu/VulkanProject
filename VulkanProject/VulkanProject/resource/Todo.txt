@@ -6,7 +6,7 @@ Fix fps display (in window description)
 
 Issues:
 
-If 
+Commented //defineFramebufShadowMap(shadowMapFormat)
 
 Good practices when working here:
 

@@ -53,7 +53,6 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	renderPassShaders = new ShaderVulkan("renderPassShaders", handle);
 	renderPassShaders->setShader("resource/Shadow/renderPass/???", ShaderVulkan::ShaderType::VS);	// todo: create shaders and fill in their names
 	renderPassShaders->setShader("resource/Shadow/renderPass/???", ShaderVulkan::ShaderType::PS);
-	std::string err;
 	renderPassShaders->compileMaterial(err);
 
 	// Create image and sampler
@@ -166,7 +165,7 @@ VkRenderPass ShadowScene::defineRenderPass(VkDevice device, VkFormat swapchainFo
 	{
 		defineFramebufColor(swapchainFormat),
 		defineFramebufDepth(depthFormat),
-		defineFramebufShadowMap(shadowMapFormat)
+		//defineFramebufShadowMap(shadowMapFormat)
 	};
 
 	VkAttachmentReference colorRef = {};
