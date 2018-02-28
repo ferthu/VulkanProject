@@ -64,6 +64,9 @@ public:
 
 	// Initiate frame pass
 	void beginFramePass();
+	// Begins a frame pass with a supplied custom frame buffer
+	void beginFramePass(VkFramebuffer* frameBuffer);
+
 	void beginCompute();
 	void submitFramePass();
 	void submitCompute();
@@ -76,6 +79,8 @@ public:
 
 	VkDevice getDevice();
 	VkPhysicalDevice getPhysical();
+
+	VkViewport getViewport();
 
 	/* Bind a physical memory partition on the device to the buffer from the specific memory pool. */
 	size_t bindPhysicalMemory(VkBuffer buffer, MemoryPool memPool);
@@ -147,6 +152,8 @@ private:
 	VkRenderPass frameBufferPass;
 	VkPipelineLayout pipelineLayout;
 	std::vector<VkDescriptorSetLayout> descriptorLayouts;
+
+	VkViewport viewport;
 
 	VkSemaphore imageAvailable;
 	VkSemaphore renderFinished, computeFinished;

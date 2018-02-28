@@ -125,6 +125,7 @@
   <ItemGroup>
     <ClCompile Include="src\Scenes\ComputeScene.cpp" />
     <ClCompile Include="src\ConstantBufferVulkan.cpp" />
+    <ClCompile Include="src\Scenes\ShadowScene.cpp" />
     <ClCompile Include="src\ShaderVulkan.cpp" />
     <ClCompile Include="src\Sampler2DVulkan.cpp" />
     <ClCompile Include="src\Stuff\RandomGenerator.cpp" />
@@ -139,6 +140,7 @@
     <ClInclude Include="include\Scenes\ComputeScene.h" />
     <ClInclude Include="include\ConstantBufferVulkan.h" />
     <ClInclude Include="include\Scene.h" />
+    <ClInclude Include="include\Scenes\ShadowScene.h" />
     <ClInclude Include="include\ShaderVulkan.h" />
     <ClInclude Include="include\Sampler2DVulkan.h" />
     <ClInclude Include="include\Stuff\RandomGenerator.h" />

@@ -28,6 +28,13 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	swapchainExtent.height = height;
 	swapchainExtent.width = width;
 
+	viewport.x = 0;
+	viewport.y = 0;
+	viewport.height = height;
+	viewport.width = width;
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
+
 	/* Create Vulkan instance
 	*/
 
@@ -420,6 +427,11 @@ void VulkanRenderer::nextFrame()
 
 void VulkanRenderer::beginFramePass()
 {
+	beginFramePass(nullptr);
+}
+
+void VulkanRenderer::beginFramePass(VkFramebuffer* frameBuffer)
+{
 	vkQueueWaitIdle(queues[QueueType::GRAPHIC].queue);
 	VkResult err = vkResetCommandBuffer(_frameCmdBuf, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 	if (err)
@@ -431,7 +443,7 @@ void VulkanRenderer::beginFramePass()
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	renderPassInfo.renderPass = frameBufferPass;
-	renderPassInfo.framebuffer = swapChainFramebuffers[swapChainImgIndex];
+	renderPassInfo.framebuffer = (frameBuffer == nullptr) ? swapChainFramebuffers[swapChainImgIndex] : *frameBuffer;
 	renderPassInfo.renderArea.offset = { 0, 0 };
 	renderPassInfo.renderArea.extent = swapchainExtent;
 
@@ -445,6 +457,7 @@ void VulkanRenderer::beginFramePass()
 
 	vkCmdBeginRenderPass(_frameCmdBuf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
+
 void VulkanRenderer::submitFramePass()
 {
 
@@ -833,6 +846,11 @@ VkPhysicalDevice VulkanRenderer::getPhysical()
 {
 	return physicalDevice;
 }
+VkViewport VulkanRenderer::getViewport()
+{
+	return viewport;
+}
+
 VkSurfaceFormatKHR VulkanRenderer::getSwapchainFormat()
 {
 	return swapchainFormat;

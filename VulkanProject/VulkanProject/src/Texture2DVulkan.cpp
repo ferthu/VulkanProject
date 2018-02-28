@@ -71,7 +71,7 @@ int Texture2DVulkan::loadFromFile(std::string filename)
 	return 0;
 }
 
-void Texture2DVulkan::createShadowMap(uint32_t height, uint32_t width)
+void Texture2DVulkan::createShadowMap(uint32_t height, uint32_t width, VkFormat shadowMapFormat)
 {
 	VkImageCreateInfo imageCreateInfo = {};
 	imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -85,7 +85,7 @@ void Texture2DVulkan::createShadowMap(uint32_t height, uint32_t width)
 	imageCreateInfo.arrayLayers = 1;
 	imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 	imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-	imageCreateInfo.format = VK_FORMAT_D16_UNORM;
+	imageCreateInfo.format = shadowMapFormat;
 	imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	if (vkCreateImage(_renderHandle->getDevice(), &imageCreateInfo, nullptr, &_imageHandle) != VK_SUCCESS)
 		throw std::runtime_error("Failed to create shadow map");
@@ -98,7 +98,7 @@ void Texture2DVulkan::createShadowMap(uint32_t height, uint32_t width)
 	depthStencilView.pNext = nullptr;
 	depthStencilView.flags = 0;
 	depthStencilView.viewType = VK_IMAGE_VIEW_TYPE_2D;
-	depthStencilView.format = VK_FORMAT_D16_UNORM;
+	depthStencilView.format = shadowMapFormat;
 	depthStencilView.subresourceRange = {};
 	depthStencilView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 	depthStencilView.subresourceRange.baseMipLevel = 0;

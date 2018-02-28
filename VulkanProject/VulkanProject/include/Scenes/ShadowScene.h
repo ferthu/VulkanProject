@@ -23,9 +23,13 @@ public:
 	virtual VkRenderPass defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat);
 
 private:
+	void createDescriptors();
+
 	const uint32_t shadowMapBindingSlot = 0;
 	const uint32_t lightMatrixBindingSlot = 1;
 	const uint32_t cameraMatrixBindingSlot = 2;
+
+	const uint32_t shadowMapSize = 512;
 
 	glm::mat4 lightMatrix;
 	glm::mat4 cameraMatrix;
@@ -36,20 +40,21 @@ private:
 	VertexBufferVulkan* normalBuffer;
 	VertexBufferVulkan::Binding normalBufferBinding;
 
-	// Sampler used for getting data from depth buffer
 	VkFramebuffer shadowMapFrameBuffer;
 	Sampler2DVulkan* shadowMapSampler;
 	Texture2DVulkan* shadowMap;
+	VkViewport shadowMapViewport;
 
 	TechniqueVulkan* depthPassTechnique;
 	ShaderVulkan* depthPassShaders;
 
 	TechniqueVulkan* renderPassTechnique;
 	ShaderVulkan* renderPassShaders;
+
+	VkFormat shadowMapFormat = VkFormat::VK_FORMAT_D16_UNORM;
 };
 
 // todo:
 // descriptors + descriptor sets for matrices and shadow map
 // write shaders
-// define render pass
 // set up rendering
