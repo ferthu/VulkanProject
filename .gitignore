@@ -5,7 +5,7 @@
 
 # Custom
 
-VulkanProject/VulkanProject/resource/tmp/
+VulkanProject/VulkanProject/resource/tmp/*
 
 
 # User-specific files
