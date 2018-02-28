@@ -36,7 +36,7 @@ enum MemoryPool
 
 const int MAX_DESCRIPTOR_POOLS = 12;
 // Size in bytes of the memory types used
-const uint32_t STORAGE_SIZE[(int)MemoryPool::Count] = { 2048 * 2048, 1024*1024, 1024 * 1024, 1024 * 1024, 1024 * 1024, 1024 * 1024 * 10 };
+const uint32_t STORAGE_SIZE[(int)MemoryPool::Count] = { 2048 * 2048, 1024*1024, 2048 * 2048, 1024 * 1024, 1024 * 1024, 1024 * 1024 * 10 };
 
 
 class Scene;

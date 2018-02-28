@@ -4,6 +4,7 @@
 #include "VulkanRenderer.h"
 #include "Scenes/TriangleScene.h"
 #include "Scenes/ComputeScene.h"
+#include "Scenes/ComputeExperiment.h"
 #undef main
 
 void updateWinTitle(VulkanRenderer *rend);
@@ -12,7 +13,8 @@ void updateWinTitle(VulkanRenderer *rend);
 int main(int argc, const char* argv)
 {
 	VulkanRenderer renderer;
-	renderer.initialize( new ComputeScene(), 512, 512);
+	renderer.initialize( new ComputeExperiment(), 1024, 1024);
+	//renderer.initialize(new ComputeScene(), 512, 512);
 
 	SDL_Event windowEvent;
 	while (true)
