@@ -3,7 +3,8 @@
 #include "Stuff/RandomGenerator.h"
 #include "VulkanConstruct.h"
 
-ComputeExperiment::ComputeExperiment()
+ComputeExperiment::ComputeExperiment(Mode mode, size_t num_particles)
+	: mode(mode), NUM_PARTICLE(num_particles)
 {
 }
 
@@ -14,8 +15,10 @@ ComputeExperiment::~ComputeExperiment()
 	delete triShader;
 	delete triBuffer;
 
-	delete techniquePost;
-	delete computeShader;
+	delete techniquePost, delete techniqueSmallOp;
+	delete compShader, delete compSmallOp;
+	delete smallOpBuf;
+	smallOpLayout.destroy(_renderHandle->getDevice());
 	postLayout.destroy(_renderHandle->getDevice());
 }
 
@@ -53,9 +56,12 @@ void ComputeExperiment::initialize(VulkanRenderer *handle)
 	postLayout.construct(_renderHandle->getDevice());
 
 
-	computeShader = new ShaderVulkan("CopyCompute", _renderHandle);
-	computeShader->setShader("resource/Compute/ComputeRegLimited.glsl", ShaderVulkan::ShaderType::CS);
-	computeShader->compileMaterial(err);
+	compShader = new ShaderVulkan("CopyCompute", _renderHandle);
+	compShader->setShader("resource/Compute/ComputeRegLimited.glsl", ShaderVulkan::ShaderType::CS);
+	compShader->compileMaterial(err);
+	compSmallOp = new ShaderVulkan("SmallOp", _renderHandle);
+	compSmallOp->setShader("resource/Compute/ComputeSimple.glsl", ShaderVulkan::ShaderType::CS);
+	compSmallOp->compileMaterial(err);
 	
 	// Framebuf targets
 	swapChainImgDesc.resize(_renderHandle->getSwapChainLength());
@@ -71,13 +77,33 @@ void ComputeExperiment::initialize(VulkanRenderer *handle)
 	}
 	vkUpdateDescriptorSets(_renderHandle->getDevice(), (uint32_t)swapChainImgDesc.size(), writeInfo, 0, nullptr);
 
+
+
 	makeTechnique();
 }
 
 void ComputeExperiment::makeTechnique()
 {
+	techniquePost = new TechniqueVulkan(_renderHandle, compShader, postLayout._layout);
+	// Gen. particle layout
+	VkDescriptorSetLayoutBinding binding;
+	smallOpLayout = vk::LayoutConstruct(1);
+	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT);
+	smallOpLayout[0] = createDescriptorLayout(_renderHandle->getDevice(), &binding, 1);
+	smallOpLayout.construct(_renderHandle->getDevice());
+	// Gen. particle buffer
+	struct Particle
+	{
+		float x; glm::vec2 pos, vel;
+	};
+	std::unique_ptr<Particle> arr(new Particle[NUM_PARTICLE]);
+	for (size_t i = 0; i < NUM_PARTICLE; i++)
+		arr.get()[i] = { 0, glm::vec2(cos(i), sin(i)), glm::vec2(-cos(i), -sin(i)) };
+	smallOpBuf = new ConstantBufferVulkan(_renderHandle);
+	smallOpBuf->setData(arr.get(), sizeof(Particle) * NUM_PARTICLE, 0, smallOpLayout[0], VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+	// Gen. technique
+	techniqueSmallOp = new TechniqueVulkan(_renderHandle, compSmallOp, smallOpLayout._layout);
 
-	techniquePost = new TechniqueVulkan(_renderHandle, computeShader, postLayout._layout);
 
 	const uint32_t NUM_BUFFER = 1;
 	const uint32_t NUM_ATTRI = 1;
@@ -130,7 +156,17 @@ void ComputeExperiment::frame(VkCommandBuffer cmdBuf)
 	uint32_t dim = 1024 / 16;
 	vkCmdDispatch(compBuf, dim, dim, 1);
 	transition_PostToPresent(compBuf, _renderHandle->getSwapChainImg(swapIndex), _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
+	
+
+	techniqueSmallOp->bind(compBuf, VK_PIPELINE_BIND_POINT_COMPUTE);
+	smallOpBuf->bind(compBuf, smallOpLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
+	// Dispatch
+	dim = NUM_PARTICLE / 256;
+	vkCmdDispatch(compBuf, dim, 1, 1);
+	
 	_renderHandle->submitCompute();
+
+
 	
 	_renderHandle->present(false, true);
 }

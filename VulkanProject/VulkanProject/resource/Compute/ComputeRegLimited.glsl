@@ -1,7 +1,7 @@
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 layout(Rgba8, set=0, binding = 0) uniform image2D img_output;
 
-const int TOT_REG = 100; // Roughly it seems they are aligned.
+const int TOT_REG = 53; // Roughly it seems they are aligned.
 const int N = TOT_REG - 10;
 float arr[N];
 

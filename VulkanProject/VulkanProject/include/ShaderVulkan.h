@@ -51,7 +51,7 @@ public:
 
 	int compileMaterial(std::string& errString);
 
-	VkShaderModule vertexShader, fragmentShader, computeShader;
+	VkShaderModule vertexShader, fragmentShader, compShader;
 	
 private:
 	std::string name;

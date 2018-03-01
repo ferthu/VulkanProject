@@ -30,8 +30,8 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 
 	viewport.x = 0;
 	viewport.y = 0;
-	viewport.height = height;
-	viewport.width = width;
+	viewport.height = (float)height;
+	viewport.width = (float)width;
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 
@@ -293,6 +293,8 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 		descriptorPools[i] = NULL;
 	descriptorPools[VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER]
 		= createDescriptorPoolSingle(device, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000);
+	descriptorPools[VkDescriptorType::VK_DESCRIPTOR_TYPE_STORAGE_BUFFER]
+		= createDescriptorPoolSingle(device, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2000);
 	descriptorPools[VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER]
 		= createDescriptorPoolSingle(device, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000);
 	descriptorPools[VkDescriptorType::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE]

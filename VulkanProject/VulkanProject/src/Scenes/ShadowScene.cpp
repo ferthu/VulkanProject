@@ -186,7 +186,7 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	shadowMapInfoWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	shadowMapInfoWrites[1].pBufferInfo = &transformMatrixInfo;
 
-	VkDescriptorBufferInfo shadowMatrixInfo = {};
+	shadowMatrixInfo = {};
 	shadowMatrixInfo.buffer = clipSpaceToShadowMapMatrixBuffer->getBuffer();
 	shadowMatrixInfo.offset = 0;
 	shadowMatrixInfo.range = VK_WHOLE_SIZE;
@@ -332,12 +332,12 @@ VkRenderPass ShadowScene::defineRenderPass(VkDevice device, VkFormat swapchainFo
 
 void ShadowScene::createBuffers()
 {
-	shadowMappingMatrixBuffer = new ConstantBufferVulkan(_renderHandle, "shadowMappingMatrix", shadowMappingMatrixBindingSlot);
+	shadowMappingMatrixBuffer = new ConstantBufferVulkan(_renderHandle);
 	shadowMappingMatrixBuffer->setData(&shadowMappingMatrix, sizeof(glm::mat4), shadowMappingMatrixBindingSlot);
 
-	transformMatrixBuffer = new ConstantBufferVulkan(_renderHandle, "transformMatrix", transformMatrixBindingSlot);
+	transformMatrixBuffer = new ConstantBufferVulkan(_renderHandle);
 	transformMatrixBuffer->setData(&transformMatrix, sizeof(glm::mat4), transformMatrixBindingSlot);
 
-	clipSpaceToShadowMapMatrixBuffer = new ConstantBufferVulkan(_renderHandle, "clipSpaceToShadowMapMatrix", clipToShadowMapMatrixBindingSlot);
+	clipSpaceToShadowMapMatrixBuffer = new ConstantBufferVulkan(_renderHandle);
 	clipSpaceToShadowMapMatrixBuffer->setData(&clipSpaceToShadowMapMatrix, sizeof(glm::mat4), clipToShadowMapMatrixBindingSlot);
 }

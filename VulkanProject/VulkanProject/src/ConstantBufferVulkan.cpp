@@ -4,8 +4,8 @@
 
 #pragma region Single buffered
 
-ConstantBufferVulkan::ConstantBufferVulkan(VulkanRenderer *renderHandle, std::string NAME, unsigned int location)
-	: buffer(NULL), _renderHandle(renderHandle), name(NAME), location(location)
+ConstantBufferVulkan::ConstantBufferVulkan(VulkanRenderer *renderHandle)
+	: buffer(NULL), _renderHandle(renderHandle), location(location)
 {
 }
 
@@ -14,41 +14,72 @@ ConstantBufferVulkan::~ConstantBufferVulkan()
 	vkDestroyBuffer(_renderHandle->getDevice(), buffer, nullptr);
 }
 
-
-void ConstantBufferVulkan::setData(const void * data, size_t size, unsigned int location)
+void ConstantBufferVulkan::transferData(const void* data, size_t byteSize, VkBufferUsageFlags usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)
 {
 	if (!buffer)
 	{
-		memSize = 2*size;	//Technically allocated size might be larger due to the memory requirements.
-		buffer = createBuffer(_renderHandle->getDevice(), memSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+		memSize = 2 * byteSize;	//Technically allocated size might be larger due to the memory requirements.
+		buffer = createBuffer(_renderHandle->getDevice(), memSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | usage);
 		poolOffset = _renderHandle->bindPhysicalMemory(buffer, MemoryPool::UNIFORM_BUFFER);
 
 		// Set the descriptor info
-
-		// Get & set the descriptor associated with the buffer
-		descriptor = _renderHandle->generateDescriptor(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, location);
 
 		// Cyclic double buffer, generate two descriptors
 		VkWriteDescriptorSet writes[1];
 		VkDescriptorBufferInfo descriptorInfo[1];
 		descriptorInfo[0].buffer = buffer;
 		descriptorInfo[0].offset = 0;
-		descriptorInfo[0].range = size;
-		writeDescriptorStruct_UNI_BUFFER(writes[0], descriptor, 0, 0, 1, descriptorInfo);
-		vkUpdateDescriptorSets(_renderHandle->getDevice(), 1, writes, 0, nullptr);
+		descriptorInfo[0].range = byteSize;
 
+		if (hasFlag(usage, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT))
+			writeDescriptorStruct_BUFFER(writes[0], descriptor, 0, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorInfo);
+		else
+			writeDescriptorStruct_BUFFER(writes[0], descriptor, 0, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorInfo);
+		vkUpdateDescriptorSets(_renderHandle->getDevice(), 1, writes, 0, nullptr);
 		// Set initial frame data
-		_renderHandle->transferBufferInitial(buffer, data, size, 0);
+		_renderHandle->transferBufferInitial(buffer, data, byteSize, 0);
 	}
-	else if(memSize / 2 < size)
+	else if (memSize / 2 < byteSize)
 		throw std::runtime_error("Constant buffer cannot fit the data.");
 	else
-		_renderHandle->transferBufferData(buffer, data, size, 0);
+		_renderHandle->transferBufferData(buffer, data, byteSize, 0);
 }
 
-void ConstantBufferVulkan::bind()
+void ConstantBufferVulkan::setData(const void * data, size_t byteSize, uint32_t setBindIndex, VkDescriptorSetLayout layout, VkBufferUsageFlags usage)
 {
-	vkCmdBindDescriptorSets(_renderHandle->getFrameCmdBuf(), VK_PIPELINE_BIND_POINT_GRAPHICS, _renderHandle->getRenderPassLayout(), location, 1, &descriptor, 0, nullptr);
+	location = setBindIndex;
+	if (!buffer)
+	{
+		// Gen the descriptor associated with the buffer
+		if(hasFlag(usage, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT))
+			descriptor = _renderHandle->generateDescriptor(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, &layout);
+		else
+			descriptor = _renderHandle->generateDescriptor(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, &layout);
+	}
+	transferData(data, byteSize, usage);
+}
+
+void ConstantBufferVulkan::setData(const void * data, size_t byteSize, uint32_t setBindIndex, VkBufferUsageFlags usage)
+{
+	location = setBindIndex;
+	if (!buffer)
+	{
+		// Gen the descriptor associated with the buffer
+		if (hasFlag(usage, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT))
+			descriptor = _renderHandle->generateDescriptor(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, setBindIndex);
+		else
+			descriptor = _renderHandle->generateDescriptor(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, setBindIndex);
+	}
+	transferData(data, byteSize, usage);
+}
+
+void ConstantBufferVulkan::bind(VkPipelineBindPoint bindPoint)
+{
+	vkCmdBindDescriptorSets(_renderHandle->getFrameCmdBuf(), bindPoint, _renderHandle->getRenderPassLayout(), location, 1, &descriptor, 0, nullptr);
+}
+void ConstantBufferVulkan::bind(VkCommandBuffer cmdBuf, VkPipelineLayout layout, VkPipelineBindPoint bindPoint)
+{
+	vkCmdBindDescriptorSets(cmdBuf, bindPoint, layout, location, 1, &descriptor, 0, nullptr);
 }
 
 VkBuffer ConstantBufferVulkan::getBuffer()

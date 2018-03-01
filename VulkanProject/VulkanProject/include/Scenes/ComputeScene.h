@@ -33,7 +33,7 @@ private:
 	// Post pass
 	TechniqueVulkan * techniquePost;
 	vk::LayoutConstruct postLayout;
-	ShaderVulkan *computeShader;
+	ShaderVulkan *compShader;
 	Sampler2DVulkan *readSampler;
 	Texture2DVulkan *readImg;
 	std::vector<VkDescriptorSet> swapChainImgDesc;

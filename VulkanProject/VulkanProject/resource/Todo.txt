@@ -1,8 +1,11 @@
 Todo:
 
 /M
-Begin construction of the final compute experiment.
-Fix fps display (in window description)
+Build versions of compute experiment.
+	- Memory dependent RegLimited task (use image reads somehow)
+	- Sequential execution
+Gaussian blur compute pass
+Allow compute pass to overlap frame
 
 Issues:
 
