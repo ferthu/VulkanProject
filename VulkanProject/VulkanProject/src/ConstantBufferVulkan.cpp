@@ -51,6 +51,11 @@ void ConstantBufferVulkan::bind()
 	vkCmdBindDescriptorSets(_renderHandle->getFrameCmdBuf(), VK_PIPELINE_BIND_POINT_GRAPHICS, _renderHandle->getRenderPassLayout(), location, 1, &descriptor, 0, nullptr);
 }
 
+VkBuffer ConstantBufferVulkan::getBuffer()
+{
+	return buffer;
+}
+
 #pragma endregion
 
 

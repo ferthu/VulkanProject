@@ -4,6 +4,7 @@
 #include "vulkan\vulkan.h"
 #include "glm\glm.hpp"
 #include "VertexBufferVulkan.h"
+#include "ConstantBufferVulkan.h"
 #include "ShaderVulkan.h"
 #include "Sampler2DVulkan.h"
 #include "Texture2DVulkan.h"
@@ -13,7 +14,7 @@ class ShadowScene :
 	public Scene
 {
 public:
-	ShadowScene();
+	ShadowScene(glm::mat4 transformMatrix, glm::mat4 lightMatrix);
 	virtual ~ShadowScene();
 
 	virtual void frame(VkCommandBuffer cmdBuf);
@@ -23,16 +24,24 @@ public:
 	virtual VkRenderPass defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat);
 
 private:
-	void createDescriptors();
+	void createBuffers();
+
+	const uint32_t shadowMappingMatrixBindingSlot = 0;
 
 	const uint32_t shadowMapBindingSlot = 0;
-	const uint32_t lightMatrixBindingSlot = 1;
-	const uint32_t cameraMatrixBindingSlot = 2;
+	const uint32_t transformMatrixBindingSlot = 1;
+	const uint32_t clipToShadowMapMatrixBindingSlot = 2;
 
 	const uint32_t shadowMapSize = 512;
 
-	glm::mat4 lightMatrix;
-	glm::mat4 cameraMatrix;
+	glm::mat4 shadowMappingMatrix;			// Contains all transformations done in the shadow mapping pass
+	ConstantBufferVulkan* shadowMappingMatrixBuffer;
+
+	glm::mat4 transformMatrix;				// Contains all transformations done on the geometry in the rendering pass
+	ConstantBufferVulkan* transformMatrixBuffer;
+
+	glm::mat4 clipSpaceToShadowMapMatrix;	// Transfoms a coordinate in clip space to a coordinate on shadow map
+	ConstantBufferVulkan* clipSpaceToShadowMapMatrixBuffer;
 
 	// Positions and normals of the triangles to render
 	VertexBufferVulkan* positionBuffer;
@@ -52,9 +61,12 @@ private:
 	ShaderVulkan* renderPassShaders;
 
 	VkFormat shadowMapFormat = VkFormat::VK_FORMAT_D16_UNORM;
+
+	VkDescriptorSet shadowPassDescriptorSet;
+	VkDescriptorSet renderPassDescriptorSet;
+
+	vk::LayoutConstruct pipelineLayoutConstruct;
 };
 
 // todo:
-// descriptors + descriptor sets for matrices and shadow map
 // write shaders
-// set up rendering

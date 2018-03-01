@@ -86,6 +86,19 @@ public:
 	size_t bindPhysicalMemory(VkBuffer buffer, MemoryPool memPool);
 	size_t bindPhysicalMemory(VkImage img, MemoryPool pool);
 
+	struct DescriptorInfo
+	{
+		VkDescriptorType type;
+		uint32_t bindingSlot;
+		VkShaderStageFlags stageFlags;	// Bitmask specifying which stages the descriptor can be accessed in
+	};
+
+	/* Generates a vector of descriptor set layout bindings described by an array of DescriptorInfos
+	descriptors		<<	Vector specifying the members of the descriptor set.
+	return			>>	The resulting descriptor set layout bindings.
+	*/
+	std::vector<VkDescriptorSetLayoutBinding> generateDescriptorSetLayoutBinding(std::vector<DescriptorInfo> descriptors);
+
 	VkDescriptorSet generateDescriptor(VkDescriptorType type, VkDescriptorSetLayout *layout);
 	VkDescriptorSet generateDescriptor(VkDescriptorType type, uint32_t set_binding);
 

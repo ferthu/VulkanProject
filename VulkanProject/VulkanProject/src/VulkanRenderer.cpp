@@ -608,6 +608,7 @@ VkDescriptorSet VulkanRenderer::generateDescriptor(VkDescriptorType type, uint32
 {
 	return createDescriptorSet(device, descriptorPools[type], &descriptorLayouts[set_binding]);
 }
+
 VkDescriptorSet VulkanRenderer::generateDescriptor(VkDescriptorType type, VkDescriptorSetLayout *layout)
 {
 	return createDescriptorSet(device, descriptorPools[type], layout);

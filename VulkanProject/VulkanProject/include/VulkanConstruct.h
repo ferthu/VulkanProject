@@ -109,6 +109,14 @@ namespace vk
 		VkDescriptorSetLayout& operator[](uint32_t index);
 	};
 }
+
+struct DescriptorInfo
+{
+	VkDescriptorType type;
+	uint32_t bindingSlot;
+	VkShaderStageFlags stageFlags;	// Bitmask specifying which stages the descriptor can be accessed in
+};
+
 #pragma endregion
 
 /* Function declarations
@@ -148,6 +156,7 @@ VkFramebuffer createFramebuffer(VkDevice device, VkRenderPass pass, VkExtent2D f
 
 VkAttachmentDescription defineFramebufColor(VkFormat swapChainImgFormat);
 VkAttachmentDescription defineFramebufDepth(VkFormat depthImgFormat);
+VkAttachmentDescription defineFramebufShadowMap(VkFormat shadowMapFormat);
 VkRenderPass createRenderPass_SingleColor(VkDevice device, VkFormat swapChainImgFormat);
 VkRenderPass createRenderPass_SingleColorDepth(VkDevice device, VkFormat swapChainImgFormat, VkFormat depthFormat);
 
@@ -220,6 +229,12 @@ VkDescriptorSetLayout createDescriptorLayout(VkDevice device, VkDescriptorSetLay
 VkDescriptorPool createDescriptorPoolSingle(VkDevice device, VkDescriptorType type, uint32_t poolSize);
 VkDescriptorPool createDescriptorPool(VkDevice device, VkDescriptorPoolSize *sizeTypes, uint32_t num_types, uint32_t poolSize);
 VkDescriptorSet createDescriptorSet(VkDevice device, VkDescriptorPool pool, VkDescriptorSetLayout *layouts);
+/* Generates a vector of descriptor set layout bindings described by an array of DescriptorInfos
+descriptors		<<	Vector specifying the members of the descriptor set.
+return			>>	The resulting descriptor set layout bindings.
+*/
+std::vector<VkDescriptorSetLayoutBinding> generateDescriptorSetLayoutBinding(std::vector<DescriptorInfo> descriptors);
+
 #pragma endregion
 
 #pragma region Pipeline
@@ -737,6 +752,20 @@ VkAttachmentDescription defineFramebufDepth(VkFormat depthImgFormat)
 	depthAttach.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	depthAttach.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	return depthAttach;
+}
+
+VkAttachmentDescription defineFramebufShadowMap(VkFormat shadowMapFormat)
+{
+	VkAttachmentDescription shadowMapAttach = {};
+	shadowMapAttach.format = shadowMapFormat;
+	shadowMapAttach.samples = VK_SAMPLE_COUNT_1_BIT;
+	shadowMapAttach.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;					// Clear col/depth buff before rendering.
+	shadowMapAttach.storeOp = VK_ATTACHMENT_STORE_OP_STORE;				// Store col/depth buff data for access/present.
+	shadowMapAttach.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	shadowMapAttach.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	shadowMapAttach.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	shadowMapAttach.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	return shadowMapAttach;
 }
 
 /* Create a simple single render pass with attached color buffer.
@@ -1542,6 +1571,28 @@ VkDescriptorSet createDescriptorSet(VkDevice device, VkDescriptorPool pool, VkDe
 #endif
 	return set;
 }
+
+std::vector<VkDescriptorSetLayoutBinding> generateDescriptorSetLayoutBinding(std::vector<DescriptorInfo> descriptors)
+{
+	if (descriptors.size() < 1)
+		throw std::runtime_error("Tried to generate an empty descriptor set");
+
+	std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+	for (int i = 0; i < descriptors.size(); +i)
+	{
+		VkDescriptorSetLayoutBinding binding = {};
+		binding.binding = descriptors[i].bindingSlot;
+		binding.descriptorType = descriptors[i].type;
+		binding.descriptorCount = 1;
+		binding.stageFlags = descriptors[i].stageFlags;
+
+		bindings.push_back(binding);
+	}
+
+	return bindings;
+}
+
 #pragma endregion
 
 

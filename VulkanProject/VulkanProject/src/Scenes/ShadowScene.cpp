@@ -1,14 +1,23 @@
 #include "Scenes/ShadowScene.h"
 #include "VulkanRenderer.h"
 #include "Stuff/RandomGenerator.h"
-
-ShadowScene::ShadowScene()
+/*
+transformMatrix	<< The matrix that transforms geometry into the camera's clip space.
+lightMatrix		<< The matrix that transforms geometry into the light's clip space.
+*/
+ShadowScene::ShadowScene(glm::mat4 transformMatrix, glm::mat4 lightMatrix)
 {
-
+	this->transformMatrix = transformMatrix;
+	shadowMappingMatrix = lightMatrix;
+	clipSpaceToShadowMapMatrix = glm::inverse(transformMatrix) * lightMatrix;
 }
 
 ShadowScene::~ShadowScene()
 {
+	delete shadowMappingMatrixBuffer;
+	delete transformMatrixBuffer;
+	delete clipSpaceToShadowMapMatrixBuffer;
+
 	delete positionBuffer;
 	delete normalBuffer;
 
@@ -106,8 +115,91 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	shadowMapViewport.minDepth = 0.0f;
 	shadowMapViewport.maxDepth = 1.0f;
 
-	// Create descriptors and descriptor sets
-	createDescriptors();
+	createBuffers();
+
+	// Shadow pass layout
+	std::vector<VkDescriptorSetLayoutBinding> bindings;
+	pipelineLayoutConstruct = vk::LayoutConstruct(2);
+	writeLayoutBinding(bindings[0], 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
+	pipelineLayoutConstruct[0] = createDescriptorLayout(_renderHandle->getDevice(), &bindings[0], 1);
+
+	// Render pass layout
+	std::vector<DescriptorInfo> renderPassDescriptorInfos;
+	renderPassDescriptorInfos.push_back(DescriptorInfo
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, shadowMapBindingSlot, VK_SHADER_STAGE_FRAGMENT_BIT });
+
+	renderPassDescriptorInfos.push_back(DescriptorInfo
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, transformMatrixBindingSlot, VK_SHADER_STAGE_VERTEX_BIT });
+
+	renderPassDescriptorInfos.push_back(DescriptorInfo
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, clipToShadowMapMatrixBindingSlot, VK_SHADER_STAGE_FRAGMENT_BIT });
+
+	bindings = generateDescriptorSetLayoutBinding(renderPassDescriptorInfos);
+	pipelineLayoutConstruct[1] = createDescriptorLayout(_renderHandle->getDevice(), &bindings[0], 1);
+
+	pipelineLayoutConstruct.construct(_renderHandle->getDevice());
+
+	// Write descriptors into descriptor sets
+	// Shadow pass
+	VkDescriptorBufferInfo shadowMatrixInfo = {};
+	shadowMatrixInfo.buffer = shadowMappingMatrixBuffer->getBuffer();
+	shadowMatrixInfo.offset = 0;
+	shadowMatrixInfo.range = VK_WHOLE_SIZE;
+
+	VkWriteDescriptorSet shadowPassWrite = {};
+	shadowPassWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	shadowPassWrite.pNext = nullptr;
+	shadowPassWrite.dstSet = shadowPassDescriptorSet;
+	shadowPassWrite.dstBinding = shadowMappingMatrixBindingSlot;
+	shadowPassWrite.descriptorCount = 1;
+	shadowPassWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	shadowPassWrite.pBufferInfo = &shadowMatrixInfo;
+
+	vkUpdateDescriptorSets(_renderHandle->getDevice(), 1, &shadowPassWrite, 0, nullptr);
+
+	// Render pass
+	VkWriteDescriptorSet shadowMapInfoWrites[3];
+
+	VkDescriptorImageInfo shadowMapInfo = {};
+	shadowMapInfo.sampler = shadowMapSampler->_sampler;
+	shadowMapInfo.imageView = shadowMap->imageInfo.imageView;
+	shadowMapInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	shadowMapInfoWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	shadowMapInfoWrites[0].pNext = nullptr;
+	shadowMapInfoWrites[0].dstSet = renderPassDescriptorSet;
+	shadowMapInfoWrites[0].dstBinding = shadowMapBindingSlot;
+	shadowMapInfoWrites[0].descriptorCount = 1;
+	shadowMapInfoWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	shadowMapInfoWrites[0].pImageInfo = &shadowMapInfo;
+
+	VkDescriptorBufferInfo transformMatrixInfo = {};
+	shadowMatrixInfo.buffer = transformMatrixBuffer->getBuffer();
+	shadowMatrixInfo.offset = 0;
+	shadowMatrixInfo.range = VK_WHOLE_SIZE;
+
+	shadowMapInfoWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	shadowMapInfoWrites[1].pNext = nullptr;
+	shadowMapInfoWrites[1].dstSet = renderPassDescriptorSet;
+	shadowMapInfoWrites[1].dstBinding = transformMatrixBindingSlot;
+	shadowMapInfoWrites[1].descriptorCount = 1;
+	shadowMapInfoWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	shadowMapInfoWrites[1].pBufferInfo = &transformMatrixInfo;
+
+	VkDescriptorBufferInfo shadowMatrixInfo = {};
+	shadowMatrixInfo.buffer = clipSpaceToShadowMapMatrixBuffer->getBuffer();
+	shadowMatrixInfo.offset = 0;
+	shadowMatrixInfo.range = VK_WHOLE_SIZE;
+
+	shadowMapInfoWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	shadowMapInfoWrites[2].pNext = nullptr;
+	shadowMapInfoWrites[2].dstSet = renderPassDescriptorSet;
+	shadowMapInfoWrites[2].dstBinding = clipToShadowMapMatrixBindingSlot;
+	shadowMapInfoWrites[2].descriptorCount = 1;
+	shadowMapInfoWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	shadowMapInfoWrites[2].pBufferInfo = &shadowMatrixInfo;
+
+	vkUpdateDescriptorSets(_renderHandle->getDevice(), 3, shadowMapInfoWrites, 0, nullptr);
 }
 
 
@@ -120,6 +212,8 @@ void ShadowScene::frame(VkCommandBuffer cmdBuf)
 
 	vkCmdSetViewport(cmdBuf, 0, 1, &shadowMapViewport);
 
+	vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayoutConstruct._layout, 0, 1, &shadowPassDescriptorSet, 0, nullptr);
+
 	positionBufferBinding.bind(0);
 	normalBufferBinding.bind(0);
 	vkCmdDraw(cmdBuf, positionBufferBinding.numElements, 1, 0, 0);
@@ -131,7 +225,7 @@ void ShadowScene::frame(VkCommandBuffer cmdBuf)
 	VkViewport normalViewport = _renderHandle->getViewport();
 	vkCmdSetViewport(cmdBuf, 0, 1, &normalViewport);
 
-	// todo: bind descriptors
+	vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayoutConstruct._layout, 0, 1, &renderPassDescriptorSet, 0, nullptr);
 
 	vkCmdDraw(cmdBuf, positionBufferBinding.numElements, 1, 0, 0);
 
@@ -145,11 +239,17 @@ void ShadowScene::defineDescriptorLayout(VkDevice device, std::vector<VkDescript
 	VkDescriptorSetLayoutBinding depthPassBinding;
 	VkDescriptorSetLayoutBinding renderPassBindings[3];
 
-	writeLayoutBinding(depthPassBinding, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);	// Transform matrix for light
+	// shadowMappingMatrix
+	writeLayoutBinding(depthPassBinding, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
 
-	writeLayoutBinding(renderPassBindings[0], shadowMapBindingSlot, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);	// Shadow map
-	writeLayoutBinding(renderPassBindings[1], lightMatrixBindingSlot, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);			// Light transform matrix
-	writeLayoutBinding(renderPassBindings[2], cameraMatrixBindingSlot, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);			// Camera transform matrix
+	// Shadow map
+	writeLayoutBinding(renderPassBindings[0], shadowMapBindingSlot, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+
+	// transformMatrix
+	writeLayoutBinding(renderPassBindings[1], transformMatrixBindingSlot, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
+	
+	// clipSpaceToShadowMapMatrix
+	writeLayoutBinding(renderPassBindings[2], clipToShadowMapMatrixBindingSlot, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	layout[0] = createDescriptorLayout(device, &depthPassBinding, 1);
 	layout[1] = createDescriptorLayout(device, &renderPassBindings[0], 3);
@@ -230,7 +330,14 @@ VkRenderPass ShadowScene::defineRenderPass(VkDevice device, VkFormat swapchainFo
 	return renderPass;
 }
 
-void ShadowScene::createDescriptors()
+void ShadowScene::createBuffers()
 {
-	// todo
+	shadowMappingMatrixBuffer = new ConstantBufferVulkan(_renderHandle, "shadowMappingMatrix", shadowMappingMatrixBindingSlot);
+	shadowMappingMatrixBuffer->setData(&shadowMappingMatrix, sizeof(glm::mat4), shadowMappingMatrixBindingSlot);
+
+	transformMatrixBuffer = new ConstantBufferVulkan(_renderHandle, "transformMatrix", transformMatrixBindingSlot);
+	transformMatrixBuffer->setData(&transformMatrix, sizeof(glm::mat4), transformMatrixBindingSlot);
+
+	clipSpaceToShadowMapMatrixBuffer = new ConstantBufferVulkan(_renderHandle, "clipSpaceToShadowMapMatrix", clipToShadowMapMatrixBindingSlot);
+	clipSpaceToShadowMapMatrixBuffer->setData(&clipSpaceToShadowMapMatrix, sizeof(glm::mat4), clipToShadowMapMatrixBindingSlot);
 }

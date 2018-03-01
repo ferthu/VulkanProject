@@ -13,6 +13,7 @@ public:
 	virtual ~ConstantBufferVulkan();
 	void setData(const void* data, size_t size, unsigned int location);
 	void bind();
+	VkBuffer getBuffer();
 
 private:
 	// Double buffered:
