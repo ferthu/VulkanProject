@@ -1,3 +1,4 @@
+#version 450
 struct Particle
 {
   float x;
@@ -5,7 +6,7 @@ struct Particle
 	vec2 vel;
 };
 
-const int complexity = 5000;
+const int complexity = 10;
 // Binding 0 : Position storage buffer
 layout(std140, binding = 0) buffer Pos
 {

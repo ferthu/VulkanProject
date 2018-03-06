@@ -234,12 +234,13 @@ std::string ShaderVulkan::runCompiler(ShaderVulkan::ShaderType type, std::string
 	commandLineStr += "\"";
 	commandLineStr.append(path_tmp);
 	commandLineStr += inputFileName + "\"";
+	commandLineStr = "-h";
 
 	//commandLineStr = " -S comp -V -o \"resource\\tmp\\ComputeShader.spv\" -e main \"resource\\tmp\\ComputeShader.glsl.comp\"";
 	LPSTR commandLine = const_cast<char *>(commandLineStr.c_str());
 	const char* lpDesk = "desktop";
 
-	STARTUPINFOA startupInfo = {};
+	STARTUPINFOA startupInfo = {0};
 	startupInfo.cb = sizeof(STARTUPINFOA);
 	startupInfo.lpReserved = NULL;
 	startupInfo.lpDesktop = const_cast<char *>(lpDesk);
@@ -271,7 +272,7 @@ std::string ShaderVulkan::runCompiler(ShaderVulkan::ShaderType type, std::string
 	GetCurrentDirectory(MAX_PATH, pwd);
 	std::cout << "Working dir: " << pwd << "\n";
 	*/
-	PROCESS_INFORMATION processInfo = {};
+	PROCESS_INFORMATION processInfo = {0};
 
 	if (!CreateProcessA("resource\\glslangValidator.exe", commandLine, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, path_exe, &startupInfo, &processInfo))
 	{

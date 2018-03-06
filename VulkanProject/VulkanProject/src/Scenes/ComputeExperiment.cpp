@@ -27,11 +27,14 @@ void ComputeExperiment::initialize(VulkanRenderer *handle)
 	Scene::initialize(handle);
 
 	// Render pass initiation
+	std::string err;
+#ifdef COMPILE
 	triShader = new ShaderVulkan("testShaders", _renderHandle);
 	triShader->setShader("resource/trishader/VertexShader.glsl", ShaderVulkan::ShaderType::VS);
 	triShader->setShader("resource/trishader/FragmentShader.glsl", ShaderVulkan::ShaderType::PS);
-	std::string err;
 	triShader->compileMaterial(err);
+#else
+#endif
 
 
 	// Create testing vertex buffer
@@ -57,10 +60,15 @@ void ComputeExperiment::initialize(VulkanRenderer *handle)
 
 
 	compShader = new ShaderVulkan("CopyCompute", _renderHandle);
-	compShader->setShader("resource/Compute/ComputeRegLimited.glsl", ShaderVulkan::ShaderType::CS);
-	compShader->compileMaterial(err);
 	compSmallOp = new ShaderVulkan("SmallOp", _renderHandle);
+#ifdef COMPILE
+	compShader->setShader("resource/Compute/ComputeRegLimited.glsl", ShaderVulkan::ShaderType::CS);
 	compSmallOp->setShader("resource/Compute/ComputeSimple.glsl", ShaderVulkan::ShaderType::CS);
+#else
+	compShader->setShader("resource/Compute/ComputeRegLimited.spv", ShaderVulkan::ShaderType::CS);
+	compSmallOp->setShader("resource/Compute/ComputeSimple.spv", ShaderVulkan::ShaderType::CS);
+#endif
+	compShader->compileMaterial(err);
 	compSmallOp->compileMaterial(err);
 	
 	// Framebuf targets
@@ -121,7 +129,7 @@ void ComputeExperiment::makeTechnique()
 	};
 	VkPipelineVertexInputStateCreateInfo vertexBindings =
 		defineVertexBufferBindings(vertexBufferBindings, NUM_BUFFER, vertexAttributes, NUM_ATTRI);
-	techniqueA = new TechniqueVulkan(_renderHandle, triShader, _renderHandle->getFramePass(), _renderHandle->getFramePassLayout(), vertexBindings);
+	//techniqueA = new TechniqueVulkan(_renderHandle, triShader, _renderHandle->getFramePass(), _renderHandle->getFramePassLayout(), vertexBindings);
 }
 
 void ComputeExperiment::frame()
@@ -152,9 +160,9 @@ void ComputeExperiment::frame()
 	// Bind resources
 	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
 	// Dispatch
-	uint32_t dim = 1024 / 16;
-	vkCmdDispatch(info._buf, dim, dim, 1);
-	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
+	uint32_t dimX = _renderHandle->getWidth() / 16;
+	uint32_t dimY = _renderHandle->getHeight() / 16;
+	vkCmdDispatch(info._buf, dimX, dimY, 1);
 
 	if (mode == Mode::SEQUENTIAL)
 		serializeCommandBuffer(info._buf);
@@ -162,9 +170,11 @@ void ComputeExperiment::frame()
 	// Dispatch compute operation
 	techniqueSmallOp->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	smallOpBuf->bind(info._buf, smallOpLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
-	dim = NUM_PARTICLE / 256;
-	vkCmdDispatch(info._buf, dim, 1, 1);
-	
+	dimX = NUM_PARTICLE / 256;
+	vkCmdDispatch(info._buf, dimX, 1, 1);
+
+	//Transition frame buf back
+	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
 	_renderHandle->submitCompute();
 
 

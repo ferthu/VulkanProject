@@ -122,17 +122,19 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	*/
 
 	// Find a suitable queue families
+	VkQueueFlags prefMemQueue[] =
+	{
+		(VK_QUEUE_TRANSFER_BIT),
+		(VK_QUEUE_TRANSFER_BIT | VK_QUEUE_SPARSE_BINDING_BIT)
+	};
 	VkQueueFlags prefGraphQueue[] =
 	{
-		(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT)
+		(VK_QUEUE_GRAPHICS_BIT)
 	};
 	VkQueueFlags prefComputeQueue[] =
 	{
-		(VK_QUEUE_COMPUTE_BIT)
-	};
-	VkQueueFlags prefMemQueue[] =
-	{
-		(VK_QUEUE_TRANSFER_BIT)
+		(VK_QUEUE_COMPUTE_BIT),
+		(VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT)
 	};
 	queues = vk::QueueConstruct(QueueType::COUNT);
 	queues.push_queue(physicalDevice, 1.f, prefMemQueue, (uint32_t)std::size(prefMemQueue));
