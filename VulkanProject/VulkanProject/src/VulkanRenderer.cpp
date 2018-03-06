@@ -427,7 +427,7 @@ void VulkanRenderer::nextFrame()
 	beginCmdBuf(_transferCmd[getTransferIndex()]);
 }
 
-VkCommandBuffer VulkanRenderer::beginFramePass(VkFramebuffer* frameBuffer)
+VulkanRenderer::FrameInfo VulkanRenderer::beginFramePass(VkFramebuffer* frameBuffer)
 {
 	vkQueueWaitIdle(queues[QueueType::GRAPHIC].queue);
 	VkResult err = vkResetCommandBuffer(_frameCmdBuf, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
@@ -454,7 +454,11 @@ VkCommandBuffer VulkanRenderer::beginFramePass(VkFramebuffer* frameBuffer)
 
 	vkCmdBeginRenderPass(_frameCmdBuf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	return _frameCmdBuf;
+	FrameInfo info;
+	info._buf = _frameCmdBuf;
+	info._swapChainIndex = swapChainImgIndex;
+	info._swapChainImage = swapchainImages[swapChainImgIndex];
+	return info;
 }
 
 void VulkanRenderer::submitFramePass()
@@ -486,15 +490,20 @@ void VulkanRenderer::submitFramePass()
 
 }
 
-VkCommandBuffer VulkanRenderer::beginCompute()
-{
+VulkanRenderer::FrameInfo VulkanRenderer::beginCompute()
+{ 
 	vkQueueWaitIdle(queues[QueueType::COMPUTE].queue);
 	VkResult err = vkResetCommandBuffer(_computeCmdBuf, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 	if (err)
 		std::cout << "Command buff reset err\n";
 	// Begin recording frame commands
 	beginCmdBuf(_computeCmdBuf,  VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-	return _computeCmdBuf;
+
+	FrameInfo info;
+	info._buf = _computeCmdBuf;
+	info._swapChainIndex = swapChainImgIndex;
+	info._swapChainImage = swapchainImages[swapChainImgIndex];
+	return info;
 }
 void VulkanRenderer::submitCompute()
 {

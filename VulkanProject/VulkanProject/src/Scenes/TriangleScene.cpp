@@ -64,13 +64,13 @@ void TriangleScene::makeTechnique()
 
 void TriangleScene::frame()
 {
-	VkCommandBuffer cmdBuf = _renderHandle->beginFramePass();
+	VulkanRenderer::FrameInfo info = _renderHandle->beginFramePass();
 
-	vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, techniqueA->pipeline);
+	vkCmdBindPipeline(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, techniqueA->pipeline);
 
 	VkDeviceSize offsets = 0;
-	triVertexBinding.bind(cmdBuf, 0);
-	vkCmdDraw(cmdBuf, (uint32_t)triVertexBinding.numElements, 1, 0, 0);
+	triVertexBinding.bind(info._buf, 0);
+	vkCmdDraw(info._buf, (uint32_t)triVertexBinding.numElements, 1, 0, 0);
 
 	_renderHandle->submitFramePass();
 	_renderHandle->present(true, false);

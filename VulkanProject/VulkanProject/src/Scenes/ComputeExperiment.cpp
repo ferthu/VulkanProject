@@ -127,7 +127,7 @@ void ComputeExperiment::frame()
 {
 
 	// Main render pass
-	VkCommandBuffer cmdBuf = _renderHandle->beginFramePass();
+	VulkanRenderer::FrameInfo info = _renderHandle->beginFramePass();
 	/*
 	vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, techniqueA->pipeline);
 
@@ -143,25 +143,24 @@ void ComputeExperiment::frame()
 
 
 	// Post pass
-	uint32_t swapIndex = _renderHandle->getSwapChainIndex();
-	VkCommandBuffer compBuf = _renderHandle->beginCompute();
-	transition_ComputeToPost(compBuf, _renderHandle->getSwapChainImg(swapIndex), _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
+	info = _renderHandle->beginCompute();
+	transition_ComputeToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
 
 	// Bind compute shader
-	techniquePost->bind(compBuf, VK_PIPELINE_BIND_POINT_COMPUTE);
+	techniquePost->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	// Bind resources
-	vkCmdBindDescriptorSets(compBuf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[swapIndex], 0, nullptr);
+	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
 	// Dispatch
 	uint32_t dim = 1024 / 16;
-	vkCmdDispatch(compBuf, dim, dim, 1);
-	transition_PostToPresent(compBuf, _renderHandle->getSwapChainImg(swapIndex), _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
+	vkCmdDispatch(info._buf, dim, dim, 1);
+	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
 	
 
-	techniqueSmallOp->bind(compBuf, VK_PIPELINE_BIND_POINT_COMPUTE);
-	smallOpBuf->bind(compBuf, smallOpLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
+	techniqueSmallOp->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
+	smallOpBuf->bind(info._buf, smallOpLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
 	// Dispatch
 	dim = NUM_PARTICLE / 256;
-	vkCmdDispatch(compBuf, dim, 1, 1);
+	vkCmdDispatch(info._buf, dim, 1, 1);
 	
 	_renderHandle->submitCompute();
 

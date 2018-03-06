@@ -113,13 +113,13 @@ void ComputeScene::frame()
 {
 
 	// Main render pass
-	VkCommandBuffer cmdBuf = _renderHandle->beginFramePass();
+	VulkanRenderer::FrameInfo info = _renderHandle->beginFramePass();
 
-	vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, techniqueA->pipeline);
+	vkCmdBindPipeline(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, techniqueA->pipeline);
 
 	VkDeviceSize offsets = 0;
-	triVertexBinding.bind(cmdBuf, 0);
-	vkCmdDraw(cmdBuf, (uint32_t)triVertexBinding.numElements, 1, 0, 0);
+	triVertexBinding.bind(info._buf, 0);
+	vkCmdDraw(info._buf, (uint32_t)triVertexBinding.numElements, 1, 0, 0);
 
 	// Subpass...
 	//vkCmdNextSubpass(cmdBuf, VK_SUBPASS_CONTENTS_INLINE); // Subpass is inlined in primary command buffer
@@ -129,19 +129,18 @@ void ComputeScene::frame()
 
 
 	// Post pass
-	uint32_t swapIndex = _renderHandle->getSwapChainIndex();
-	VkCommandBuffer compBuf = _renderHandle->beginCompute();
-	transition_ComputeToPost(compBuf, _renderHandle->getSwapChainImg(swapIndex), _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
+	info = _renderHandle->beginCompute();
+	transition_ComputeToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
 
 	// Bind compute shader
-	techniquePost->bind(compBuf, VK_PIPELINE_BIND_POINT_COMPUTE);
+	techniquePost->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	// Bind resources
- 	readImg->bind(compBuf, 0, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
-	vkCmdBindDescriptorSets(compBuf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 1, 1, &swapChainImgDesc[swapIndex], 0, nullptr);
+ 	readImg->bind(info._buf, 0, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
+	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 1, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
 	// Dispatch
 	uint32_t dim = 512 / 16;
-	vkCmdDispatch(compBuf, dim, dim, 1);
-	transition_PostToPresent(compBuf, _renderHandle->getSwapChainImg(swapIndex), _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
+	vkCmdDispatch(info._buf, dim, dim, 1);
+	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
 	_renderHandle->submitCompute();
 	
 	_renderHandle->present(false, true);
