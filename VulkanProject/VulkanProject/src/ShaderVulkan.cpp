@@ -144,11 +144,11 @@ std::string ShaderVulkan::assembleShader(ShaderVulkan::ShaderType type)
 	std::string fileName;
 
 	if (type == ShaderVulkan::ShaderType::VS)
-		fileName = "VertexShader.glsl.vert";
+		fileName = "VertexShader.vert";
 	else if (type == ShaderVulkan::ShaderType::PS)
-		fileName = "FragmentShader.glsl.frag";
+		fileName = "FragmentShader.frag";
 	else if (type == ShaderVulkan::ShaderType::CS)
-		fileName = "ComputeShader.glsl.comp";
+		fileName = "ComputeShader.comp";
 	else
 		throw std::runtime_error("Unsupported shader type!");
 
@@ -170,8 +170,7 @@ std::string ShaderVulkan::assembleShader(ShaderVulkan::ShaderType type)
 	std::ofstream completeShader(outFile);
 	if (completeShader.is_open())
 	{
-		completeShader << "#version 450\n";
-
+		//completeShader << "#version 450\n";
 		completeShader << assembleDefines(type);
 
 		completeShader << fileContents.str();
@@ -234,7 +233,6 @@ std::string ShaderVulkan::runCompiler(ShaderVulkan::ShaderType type, std::string
 	commandLineStr += "\"";
 	commandLineStr.append(path_tmp);
 	commandLineStr += inputFileName + "\"";
-	commandLineStr = "-h";
 
 	//commandLineStr = " -S comp -V -o \"resource\\tmp\\ComputeShader.spv\" -e main \"resource\\tmp\\ComputeShader.glsl.comp\"";
 	LPSTR commandLine = const_cast<char *>(commandLineStr.c_str());

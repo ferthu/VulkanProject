@@ -52,7 +52,7 @@ enum QueueType {
 	MEM = 0,
 	GRAPHIC = 1,
 	COMPUTE = 2,
-	COMPUTE3 = 3,
+	COMPUTE2 = 3,
 	COUNT = 4
 };
 // Set constant values for now
@@ -68,7 +68,7 @@ public:
 
 	int initialize(Scene *scene, unsigned int width, unsigned int height, uint32_t BIT_FLAGS);
 	void frame();
-	void present(bool waitRender, bool waitCompute);
+	void present();
 
 	struct FrameInfo
 	{
@@ -78,9 +78,9 @@ public:
 	};
 	// Begins a frame pass with a supplied custom frame buffer
 	FrameInfo beginFramePass(VkFramebuffer* frameBuffer = NULL);
-	FrameInfo beginCompute();
+	FrameInfo beginCompute(uint32_t computeQueueIndex = 0);
 	void submitFramePass();
-	void submitCompute();
+	void submitCompute(uint32_t computeQueueIndex = 0, bool syncPrevious = true);
 
 	virtual int beginShutdown();
 	int shutdown();
@@ -161,9 +161,12 @@ private:
 
 	VkViewport viewport;
 
-	VkSemaphore imageAvailable;
-	VkSemaphore renderFinished[2], computeFinished;		// Multiple render signals as it could be useful to overlap frame buffers.
-	VkCommandBuffer _frameCmdBuf[2], _computeCmdBuf;
+	VkSemaphore imageAvailable; 
+	VkSemaphore renderFinished[2], computeFinished[2];		// Multiple render signals as it could be useful to overlap frame buffers.
+	uint32_t waitQueueLen;
+	VkSemaphore waitQueue[QueueType::COUNT];
+
+	VkCommandBuffer _frameCmdBuf[2], _computeCmdBuf[2];
 	VkCommandBuffer _transferCmd[2];
 	VkFence			_transferFences[2];
 	uint32_t swapChainImgIndex;								// Tracks frame buffer index for current frame

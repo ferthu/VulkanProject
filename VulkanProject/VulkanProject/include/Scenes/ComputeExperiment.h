@@ -21,7 +21,7 @@ public:
 		SEQUENTIAL
 	};
 	
-	ComputeExperiment(Mode mode = REG_LIMITED, size_t num_particles = 1024 * 512);
+	ComputeExperiment(Mode mode = REG_LIMITED, uint32_t num_particles = 1024 * 512);
 	~ComputeExperiment();
 
 	virtual void frame();
@@ -31,7 +31,7 @@ public:
 
 private:
 	Mode mode;
-	size_t NUM_PARTICLE;
+	uint32_t NUM_PARTICLE;
 
 	void makeTechnique();
 

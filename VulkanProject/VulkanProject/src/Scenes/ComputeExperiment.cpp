@@ -3,7 +3,7 @@
 #include "Stuff/RandomGenerator.h"
 #include "VulkanConstruct.h"
 
-ComputeExperiment::ComputeExperiment(Mode mode, size_t num_particles)
+ComputeExperiment::ComputeExperiment(Mode mode, uint32_t num_particles)
 	: mode(mode), NUM_PARTICLE(num_particles)
 {
 }
@@ -179,7 +179,7 @@ void ComputeExperiment::frame()
 
 
 	
-	_renderHandle->present(false, true);
+	_renderHandle->present();
 }
 
 

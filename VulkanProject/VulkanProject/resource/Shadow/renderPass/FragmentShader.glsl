@@ -1,3 +1,4 @@
+#version 450
 layout(location = 0) in vec3 normal;
 
 layout(set=1,binding=0) uniform sampler2DShadow shadowMap;

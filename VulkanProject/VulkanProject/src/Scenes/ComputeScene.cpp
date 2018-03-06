@@ -147,7 +147,7 @@ void ComputeScene::post()
 	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
 	_renderHandle->submitCompute();
 	
-	_renderHandle->present(false, true);
+	_renderHandle->present();
 }
 
 void ComputeScene::frame()

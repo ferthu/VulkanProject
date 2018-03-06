@@ -101,8 +101,8 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	// Define viewport
 	shadowMapViewport.x = 0;
 	shadowMapViewport.y = 0;
-	shadowMapViewport.height = shadowMapSize;
-	shadowMapViewport.width = shadowMapSize;
+	shadowMapViewport.height = (float)shadowMapSize;
+	shadowMapViewport.width = (float)shadowMapSize;
 	shadowMapViewport.minDepth = 0.0f;
 	shadowMapViewport.maxDepth = 1.0f;
 
