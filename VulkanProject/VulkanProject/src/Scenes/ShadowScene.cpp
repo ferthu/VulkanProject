@@ -205,8 +205,8 @@ void ShadowScene::frame()
 
 	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayoutConstruct._layout, 0, 1, &shadowPassDescriptorSet, 0, nullptr);
 
-	positionBufferBinding.bind(info._buf, 0, 0, 0);
-	normalBufferBinding.bind(info._buf, 0, 0, 1);
+	positionBufferBinding.bind(info._buf, 0);
+	normalBufferBinding.bind(info._buf, 1);
 	vkCmdDraw(info._buf, positionBufferBinding.numElements, 1, 0, 0);
 
 
