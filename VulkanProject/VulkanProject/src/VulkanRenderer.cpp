@@ -7,10 +7,11 @@
 #include "Sampler2DVulkan.h"
 #include "ConstantBufferVulkan.h"
 #include "TechniqueVulkan.h"
+#include "Scene.h"
 #include <SDL/SDL_syswm.h>
 #include <assert.h>
 #include <iostream>
-#include "Scene.h"
+#include <algorithm>
 
 
 VulkanRenderer::VulkanRenderer()
@@ -22,7 +23,7 @@ VulkanRenderer::~VulkanRenderer() { }
 
 #pragma region Init & Destroy
 
-int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int height)
+int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int height, uint32_t BIT_FLAGS)
 {
 	this->scene = scene;
 	swapchainExtent.height = height;
@@ -225,7 +226,7 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	swapchainCreateInfo.pNext = nullptr;
 	swapchainCreateInfo.flags = 0;
 	swapchainCreateInfo.surface = windowSurface;
-	swapchainCreateInfo.minImageCount = surfaceCapabilities.minImageCount;
+	swapchainCreateInfo.minImageCount = hasFlag(BIT_FLAGS, TRIPLE_BUFFERED) ? std::max(3u, surfaceCapabilities.minImageCount) : surfaceCapabilities.minImageCount;
 	swapchainCreateInfo.imageFormat = swapchainFormat.format;	
 	swapchainCreateInfo.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
 	swapchainCreateInfo.imageExtent = swapchainExtent;
@@ -311,6 +312,7 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	// Our scene implementation
 	scene->defineDescriptorLayout(device, descriptorLayouts);
 	pipelineLayout = createPipelineLayout(device, descriptorLayouts.data(), (uint32_t)descriptorLayouts.size());
+	int a = 0;
 	this->scene->initialize(this);
 
 	beginCmdBuf(_transferCmd[getTransferIndex()]);

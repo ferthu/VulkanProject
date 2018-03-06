@@ -35,7 +35,7 @@ void ComputeScene::initialize(VulkanRenderer *handle)
 
 
 	// Create testing vertex buffer
-	const uint32_t NUM_TRIS = 100;
+	const uint32_t NUM_TRIS = 10000;
 	mf::RandomGenerator rnd;
 	rnd.seedGenerator();
 	glm::vec4 testTriangles[NUM_TRIS * 3];
