@@ -28,10 +28,10 @@ void VertexBufferVulkan::setData(const void* data, Binding& binding)
 	setData(data, binding.byteSize(), binding.offset);
 }
 
-void VertexBufferVulkan::bind(size_t offset, size_t size, unsigned int location)
+void VertexBufferVulkan::bind(VkCommandBuffer cmdBuf, size_t offset, size_t size, unsigned int location)
 {
 	VkDeviceSize offsets[] = { offset };
-	vkCmdBindVertexBuffers(_renderHandle->getFrameCmdBuf(), location, 1, &_bufferHandle, offsets);
+	vkCmdBindVertexBuffers(cmdBuf, location, 1, &_bufferHandle, offsets);
 }
 
 void VertexBufferVulkan::unbind()
@@ -45,16 +45,16 @@ size_t VertexBufferVulkan::getSize()
 
 #pragma region Binding implementation
 
-void VertexBufferVulkan::Binding::bind(uint32_t location)
+void VertexBufferVulkan::Binding::bind(VkCommandBuffer cmdBuf, uint32_t location)
 {
-	buffer->bind(offset, sizeElement * numElements, location);
+	buffer->bind(cmdBuf, offset, sizeElement * numElements, location);
 }
 VertexBufferVulkan::Binding::Binding()
 	: buffer(nullptr), sizeElement(0), numElements(0), offset(0)
 {
 
 }
-VertexBufferVulkan::Binding::Binding(VertexBufferVulkan* buffer, size_t sizeElement, size_t numElements, size_t offset)
+VertexBufferVulkan::Binding::Binding(VertexBufferVulkan* buffer, uint32_t sizeElement, uint32_t numElements, uint32_t offset)
 	: buffer(buffer), sizeElement(sizeElement), numElements(numElements), offset(offset)
 {
 

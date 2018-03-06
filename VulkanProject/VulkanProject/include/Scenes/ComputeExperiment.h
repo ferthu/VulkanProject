@@ -17,12 +17,14 @@ public:
 	enum Mode
 	{
 		REG_LIMITED,
+		MEM_CONSUMPTION,
+		SEQUENTIAL
 	};
 	
 	ComputeExperiment(Mode mode = REG_LIMITED, size_t num_particles = 1024 * 512);
 	~ComputeExperiment();
 
-	virtual void frame(VkCommandBuffer cmdBuf);
+	virtual void frame();
 	virtual void initialize(VulkanRenderer *handle);
 	virtual void defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout);
 	virtual VkRenderPass defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat, std::vector<VkImageView>& additionalAttatchments);

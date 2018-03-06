@@ -16,6 +16,8 @@
 #include "ShaderVulkan.h"
 #include "TechniqueVulkan.h"
 
+/* Remember!!! number of device allocations is limited (very).
+*/
 struct DevMemoryAllocation
 {
 	VkDeviceMemory handle;	// The device memory handle
@@ -62,12 +64,15 @@ public:
 	void frame();
 	void present(bool waitRender, bool waitCompute);
 
-	// Initiate frame pass
-	void beginFramePass();
+	struct FrameInfo
+	{
+		VkCommandBuffer _buf;
+		uint32_t _swapChainIndex;
+		VkImage _swapChainImage;
+	};
 	// Begins a frame pass with a supplied custom frame buffer
-	void beginFramePass(VkFramebuffer* frameBuffer);
-
-	void beginCompute();
+	FrameInfo beginFramePass(VkFramebuffer* frameBuffer = NULL);
+	FrameInfo beginCompute();
 	void submitFramePass();
 	void submitCompute();
 
@@ -98,20 +103,15 @@ public:
 	/* Acquire the RenderPass for the final frame buffers presented to the screen.
 	*/
 	VkRenderPass getFramePass();
-	VkCommandBuffer getFrameCmdBuf();
-	VkCommandBuffer getComputeBuf();
+	VkPipelineLayout getFramePassLayout();
 	int getQueueFamily(QueueType queue) { return queues[queue].family; };
 	uint32_t getFrameIndex() { return frameCycle; }
 	uint32_t getTransferIndex() { return !frameCycle; }
-	/* Get the index of the current swap chain.
-	*/
-	uint32_t getSwapChainIndex() { return swapChainImgIndex; }
 	size_t getSwapChainLength() { return swapchainImages.size(); }
 
 	VkSurfaceFormatKHR getSwapchainFormat();
 	VkImageView getSwapChainView(uint32_t index);
 	VkImage getSwapChainImg(uint32_t index);
-	VkPipelineLayout getRenderPassLayout();
 
 	unsigned int getWidth();
 	unsigned int getHeight();
@@ -125,7 +125,7 @@ private:
 	int chosenPhysicalDevice;
 	VkPhysicalDevice physicalDevice;
 	VkPhysicalDeviceProperties deviceProperties;
-	std::vector<DevMemoryAllocation> memPool;// Memory pool of device memory
+	std::vector<DevMemoryAllocation> memPool;// Memory pool of device memory. Remember!!! number of device allocations is limited (very).
 
 	bool globalWireframeMode = false;
 
@@ -156,8 +156,8 @@ private:
 	VkViewport viewport;
 
 	VkSemaphore imageAvailable;
-	VkSemaphore renderFinished, computeFinished;
-	VkCommandBuffer _frameCmdBuf, _computeCmdBuf;
+	VkSemaphore renderFinished[2], computeFinished;		// Multiple render signals as it could be useful to overlap frame buffers.
+	VkCommandBuffer _frameCmdBuf[2], _computeCmdBuf;
 	VkCommandBuffer _transferCmd[2];
 	VkFence			_transferFences[2];
 	uint32_t swapChainImgIndex;								// Tracks frame buffer index for current frame

@@ -8,21 +8,32 @@
 #include "Texture2DVulkan.h"
 #include "Sampler2DVulkan.h"
 
+
 class ComputeScene :
 	public Scene
 {
 public:
-	ComputeScene();
+
+	enum Mode {
+		Sequential
+	};
+
+	ComputeScene(Mode mode = Sequential);
 	~ComputeScene();
 
-	virtual void frame(VkCommandBuffer cmdBuf);
+	virtual void frame();
 	virtual void initialize(VulkanRenderer *handle);
 	virtual void defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout);
 	virtual VkRenderPass defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat, std::vector<VkImageView>& additionalAttatchments);
 
 private:
 
+	Mode mode;
+
 	void makeTechnique();
+
+	void mainPass();
+	void post();
 
 	// Render pass
 	ShaderVulkan *triShader;

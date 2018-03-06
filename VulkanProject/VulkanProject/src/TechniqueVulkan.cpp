@@ -12,15 +12,19 @@ TechniqueVulkan::TechniqueVulkan(VulkanRenderer* renderer, ShaderVulkan* sHandle
 {
 	createComputePipeline(layout);
 }
-TechniqueVulkan::TechniqueVulkan( VulkanRenderer* renderer, ShaderVulkan* sHandle, VkRenderPass renderPass, VkPipelineVertexInputStateCreateInfo &vertexInputState, uint32_t subpassIndex)
+
+/* Generate a graphics pipeline technique
+*/
+TechniqueVulkan::TechniqueVulkan( VulkanRenderer* renderer, ShaderVulkan* sHandle, VkRenderPass renderPass, VkPipelineLayout layout, VkPipelineVertexInputStateCreateInfo &vertexInputState)
 	: _sHandle(sHandle), _renderHandle(renderer), _passHandle(renderPass)
 {
-	createGraphicsPipeline(vertexInputState, subpassIndex);
+	createGraphicsPipeline(layout, vertexInputState, 0);
 }
 
-TechniqueVulkan::TechniqueVulkan(VulkanRenderer * renderer, ShaderVulkan * sHandle, VkRenderPass renderPass, VkPipelineVertexInputStateCreateInfo & vertexInputState)
+TechniqueVulkan::TechniqueVulkan(VulkanRenderer* renderer, ShaderVulkan* sHandle, VkRenderPass renderPass, VkPipelineLayout layout, VkPipelineVertexInputStateCreateInfo &vertexInputState, uint32_t subpassIndex)
+	: _sHandle(sHandle), _renderHandle(renderer), _passHandle(renderPass)
 {
-	TechniqueVulkan(renderer, sHandle, renderPass, vertexInputState, 0);
+	createGraphicsPipeline(layout, vertexInputState, subpassIndex);
 }
 
 TechniqueVulkan::~TechniqueVulkan()
@@ -33,7 +37,7 @@ void TechniqueVulkan::bind(VkCommandBuffer cmdBuf, VkPipelineBindPoint bindPoint
 	vkCmdBindPipeline(cmdBuf, bindPoint, pipeline);
 }
 
-void TechniqueVulkan::createGraphicsPipeline(VkPipelineVertexInputStateCreateInfo &vertexInputState, uint32_t subpassIndex)
+void TechniqueVulkan::createGraphicsPipeline(VkPipelineLayout layout, VkPipelineVertexInputStateCreateInfo &vertexInputState, uint32_t subpassIndex)
 {
 	assert(_sHandle);
 	VkPipelineShaderStageCreateInfo stages[2];
@@ -87,7 +91,7 @@ void TechniqueVulkan::createGraphicsPipeline(VkPipelineVertexInputStateCreateInf
 	pipelineInfo.pDepthStencilState = &depthStencil;
 	pipelineInfo.pColorBlendState = &pipelineColorBlendStateCreateInfo;
 	pipelineInfo.pDynamicState = nullptr;
-	pipelineInfo.layout = _renderHandle->getRenderPassLayout();
+	pipelineInfo.layout = layout;
 	pipelineInfo.renderPass = _passHandle;
 	pipelineInfo.subpass = subpassIndex;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;

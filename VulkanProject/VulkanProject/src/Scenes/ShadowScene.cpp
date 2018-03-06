@@ -1,6 +1,7 @@
 #include "Scenes/ShadowScene.h"
 #include "VulkanRenderer.h"
 #include "Stuff/RandomGenerator.h"
+#include "VertexBufferVulkan.h"
 /*
 transformMatrix	<< The matrix that transforms geometry into the camera's clip space.
 lightMatrix		<< The matrix that transforms geometry into the light's clip space.
@@ -94,8 +95,8 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	VkPipelineVertexInputStateCreateInfo vertexBindings =
 		defineVertexBufferBindings(vertexBufferBindings, BUFFER_COUNT, vertexAttributes, ATTRIBUTE_COUNT);
 
-	depthPassTechnique = new TechniqueVulkan(_renderHandle, depthPassShaders, _renderHandle->getFramePass(), vertexBindings, 0);
-	renderPassTechnique = new TechniqueVulkan(_renderHandle, renderPassShaders, _renderHandle->getFramePass(), vertexBindings, 1);
+	depthPassTechnique = new TechniqueVulkan(_renderHandle, depthPassShaders, _renderHandle->getFramePass(), _renderHandle->getFramePassLayout(), vertexBindings);
+	renderPassTechnique = new TechniqueVulkan(_renderHandle, renderPassShaders, _renderHandle->getFramePass(), _renderHandle->getFramePassLayout(), vertexBindings);
 
 	// Define viewport
 	shadowMapViewport.x = 0;
@@ -193,31 +194,31 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 }
 
 
-void ShadowScene::frame(VkCommandBuffer cmdBuf)
+void ShadowScene::frame()
 {
-	_renderHandle->beginFramePass(&shadowMapFrameBuffer);
+	VulkanRenderer::FrameInfo info = _renderHandle->beginFramePass(&shadowMapFrameBuffer);
 
 	// Shadow map pass
-	vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, depthPassTechnique->pipeline);
+	vkCmdBindPipeline(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, depthPassTechnique->pipeline);
 
-	vkCmdSetViewport(cmdBuf, 0, 1, &shadowMapViewport);
+	vkCmdSetViewport(info._buf, 0, 1, &shadowMapViewport);
 
-	vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayoutConstruct._layout, 0, 1, &shadowPassDescriptorSet, 0, nullptr);
+	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayoutConstruct._layout, 0, 1, &shadowPassDescriptorSet, 0, nullptr);
 
-	positionBufferBinding.bind(0);
-	normalBufferBinding.bind(0);
-	vkCmdDraw(cmdBuf, positionBufferBinding.numElements, 1, 0, 0);
+	positionBufferBinding.bind(info._buf, 0, 0, 0);
+	normalBufferBinding.bind(info._buf, 0, 0, 1);
+	vkCmdDraw(info._buf, positionBufferBinding.numElements, 1, 0, 0);
 
 
 	// Rendering pass
-	vkCmdNextSubpass(cmdBuf, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdNextSubpass(info._buf, VK_SUBPASS_CONTENTS_INLINE);
 
 	VkViewport normalViewport = _renderHandle->getViewport();
-	vkCmdSetViewport(cmdBuf, 0, 1, &normalViewport);
+	vkCmdSetViewport(info._buf, 0, 1, &normalViewport);
 
-	vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayoutConstruct._layout, 0, 1, &renderPassDescriptorSet, 0, nullptr);
+	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayoutConstruct._layout, 0, 1, &renderPassDescriptorSet, 0, nullptr);
 
-	vkCmdDraw(cmdBuf, positionBufferBinding.numElements, 1, 0, 0);
+	vkCmdDraw(info._buf, positionBufferBinding.numElements, 1, 0, 0);
 
 	_renderHandle->submitFramePass();
 }

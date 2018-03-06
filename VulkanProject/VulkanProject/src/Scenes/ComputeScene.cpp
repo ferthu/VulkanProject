@@ -3,7 +3,8 @@
 #include "Stuff/RandomGenerator.h"
 #include "VulkanConstruct.h"
 
-ComputeScene::ComputeScene()
+ComputeScene::ComputeScene(Mode mode)
+	: mode(mode)
 {
 }
 
@@ -107,19 +108,20 @@ void ComputeScene::makeTechnique()
 	};
 	VkPipelineVertexInputStateCreateInfo vertexBindings =
 		defineVertexBufferBindings(vertexBufferBindings, NUM_BUFFER, vertexAttributes, NUM_ATTRI);
-	techniqueA = new TechniqueVulkan(_renderHandle, triShader, _renderHandle->getFramePass(), vertexBindings);
+	techniqueA = new TechniqueVulkan(_renderHandle, triShader, _renderHandle->getFramePass(), _renderHandle->getFramePassLayout(), vertexBindings);
 }
-void ComputeScene::frame(VkCommandBuffer cmdBuf)
+
+
+void ComputeScene::mainPass()
 {
-
 	// Main render pass
-	_renderHandle->beginFramePass();
+	VulkanRenderer::FrameInfo info = _renderHandle->beginFramePass();
 
-	vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, techniqueA->pipeline);
+	vkCmdBindPipeline(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, techniqueA->pipeline);
 
 	VkDeviceSize offsets = 0;
-	triVertexBinding.bind(0);
-	vkCmdDraw(cmdBuf, (uint32_t)triVertexBinding.numElements, 1, 0, 0);
+	triVertexBinding.bind(info._buf, 0);
+	vkCmdDraw(info._buf, (uint32_t)triVertexBinding.numElements, 1, 0, 0);
 
 	// Subpass...
 	//vkCmdNextSubpass(cmdBuf, VK_SUBPASS_CONTENTS_INLINE); // Subpass is inlined in primary command buffer
@@ -127,26 +129,36 @@ void ComputeScene::frame(VkCommandBuffer cmdBuf)
 	// Finish
 	_renderHandle->submitFramePass();
 
-
+}
+void ComputeScene::post()
+{
 	// Post pass
-	VkCommandBuffer compBuf = _renderHandle->getComputeBuf();
-	uint32_t swapIndex = _renderHandle->getSwapChainIndex();
-	_renderHandle->beginCompute();
-	transition_ComputeToPost(compBuf, _renderHandle->getSwapChainImg(swapIndex), _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
+	VulkanRenderer::FrameInfo info = _renderHandle->beginCompute();
+	transition_ComputeToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
 
 	// Bind compute shader
-	techniquePost->bind(compBuf, VK_PIPELINE_BIND_POINT_COMPUTE);
+	techniquePost->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	// Bind resources
- 	readImg->bind(compBuf, 0, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
-	vkCmdBindDescriptorSets(compBuf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 1, 1, &swapChainImgDesc[swapIndex], 0, nullptr);
+ 	readImg->bind(info._buf, 0, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
+	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 1, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
 	// Dispatch
 	uint32_t dim = 512 / 16;
-	vkCmdDispatch(compBuf, dim, dim, 1);
-	transition_PostToPresent(compBuf, _renderHandle->getSwapChainImg(swapIndex), _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
+	vkCmdDispatch(info._buf, dim, dim, 1);
+	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
 	_renderHandle->submitCompute();
 	
 	_renderHandle->present(false, true);
 }
+
+void ComputeScene::frame()
+{
+	if (mode == Mode::Sequential)
+	{
+		mainPass();
+		post();
+	}
+}
+
 
 
 void ComputeScene::defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout)
@@ -169,11 +181,7 @@ VkRenderPass ComputeScene::defineRenderPass(VkDevice device, VkFormat swapchainF
 	VkAttachmentReference depthAttachmentRef = {};
 	depthAttachmentRef.attachment = 1;
 	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-	VkAttachmentReference postAttachmentRef = {};
-	postAttachmentRef.attachment = 0;
-	postAttachmentRef.layout = VK_IMAGE_LAYOUT_GENERAL;
-
+	
 	const uint32_t NUM_SUBPASS = 1;
 	VkSubpassDescription subpass[NUM_SUBPASS];
 	subpass[0].flags = 0;
