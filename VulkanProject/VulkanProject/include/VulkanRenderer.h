@@ -36,9 +36,14 @@ enum MemoryPool
 	Count = 6
 };
 
+enum RenderFlagBits
+{
+	TRIPLE_BUFFERED = 0x00000001
+};
+
 const int MAX_DESCRIPTOR_POOLS = 12;
 // Size in bytes of the memory types used
-const uint32_t STORAGE_SIZE[(int)MemoryPool::Count] = { 2048 * 2048*16, 2048 * 2048*16, 2048 * 2048, 1024 * 1024, 1024 * 1024, 1024 * 1024 * 10 };
+const uint32_t STORAGE_SIZE[(int)MemoryPool::Count] = { 2048 * 2048*64, 2048 * 2048*16, 2048 * 2048, 2048 * 2048 * 64, 1024 * 1024 * 64, 1024 * 1024 * 10 };
 
 
 class Scene;
@@ -60,7 +65,7 @@ public:
 	
 	void setWinTitle(const char* title);
 
-	int initialize(Scene *scene, unsigned int width, unsigned int height);
+	int initialize(Scene *scene, unsigned int width, unsigned int height, uint32_t BIT_FLAGS);
 	void frame();
 	void present(bool waitRender, bool waitCompute);
 
