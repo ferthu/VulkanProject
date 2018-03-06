@@ -73,10 +73,6 @@ void ConstantBufferVulkan::setData(const void * data, size_t byteSize, uint32_t 
 	transferData(data, byteSize, usage);
 }
 
-void ConstantBufferVulkan::bind(VkPipelineBindPoint bindPoint)
-{
-	vkCmdBindDescriptorSets(_renderHandle->getFrameCmdBuf(), bindPoint, _renderHandle->getRenderPassLayout(), location, 1, &descriptor, 0, nullptr);
-}
 void ConstantBufferVulkan::bind(VkCommandBuffer cmdBuf, VkPipelineLayout layout, VkPipelineBindPoint bindPoint)
 {
 	vkCmdBindDescriptorSets(cmdBuf, bindPoint, layout, location, 1, &descriptor, 0, nullptr);
@@ -147,9 +143,9 @@ void ConstantDoubleBufferVulkan::setData(const void * data, size_t size, unsigne
 		_renderHandle->transferBufferData(buffer[_renderHandle->getTransferIndex()], data, size, 0);
 }
 
-void ConstantDoubleBufferVulkan::bind()
+void ConstantDoubleBufferVulkan::bind(VkCommandBuffer cmdBuf, VkPipelineLayout layout, VkPipelineBindPoint bindPoint)
 {
-	vkCmdBindDescriptorSets(_renderHandle->getFrameCmdBuf(), VK_PIPELINE_BIND_POINT_GRAPHICS, _renderHandle->getRenderPassLayout(), location, 1, &descriptor[_renderHandle->getFrameIndex()], 0, nullptr);
+	vkCmdBindDescriptorSets(cmdBuf, bindPoint, layout, location, 1, &descriptor[_renderHandle->getFrameIndex()], 0, nullptr);
 }
 
 #pragma endregion

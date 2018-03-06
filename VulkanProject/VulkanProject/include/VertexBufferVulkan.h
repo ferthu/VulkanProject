@@ -11,12 +11,12 @@ public:
 	/* Binding used to bind vertex buffers.
 	*/
 	struct Binding {
-		size_t sizeElement, numElements, offset;
+		uint32_t sizeElement, numElements, offset;
 		VertexBufferVulkan* buffer;
-		void bind(uint32_t location);
+		void bind(VkCommandBuffer cmdBuf, uint32_t location);
 	
 		Binding();
-		Binding(VertexBufferVulkan* buffer, size_t sizeElement, size_t numElements, size_t offset);
+		Binding(VertexBufferVulkan* buffer, uint32_t sizeElement, uint32_t numElements, uint32_t offset);
 		size_t byteSize() { return sizeElement * numElements; }
 	};
 
@@ -26,7 +26,7 @@ public:
 
 	void setData(const void* data, size_t size, size_t offset);
 	void setData(const void* data, Binding& binding);
-	void bind(size_t offset, size_t size, unsigned int location);
+	void bind(VkCommandBuffer cmdBuf, size_t offset, size_t size, unsigned int location);
 	void unbind();
 	size_t getSize();
 	VkBuffer _bufferHandle;

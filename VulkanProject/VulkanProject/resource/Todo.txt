@@ -6,6 +6,7 @@ Build versions of compute experiment.
 	- Sequential execution
 Gaussian blur compute pass
 Allow compute pass to overlap frame
+Async. compute settings
 
 Issues:
 

@@ -17,7 +17,7 @@ public:
 	ShadowScene(glm::mat4 transformMatrix, glm::mat4 lightMatrix);
 	virtual ~ShadowScene();
 
-	virtual void frame(VkCommandBuffer cmdBuf);
+	virtual void frame();
 	virtual void initialize(VulkanRenderer* handle);
 
 	virtual void defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout);

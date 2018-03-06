@@ -104,8 +104,8 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	VkPipelineVertexInputStateCreateInfo vertexBindings =
 		defineVertexBufferBindings(vertexBufferBindings, BUFFER_COUNT, vertexAttributes, ATTRIBUTE_COUNT);
 
-	depthPassTechnique = new TechniqueVulkan(_renderHandle, depthPassShaders, _renderHandle->getFramePass(), vertexBindings);
-	renderPassTechnique = new TechniqueVulkan(_renderHandle, renderPassShaders, _renderHandle->getFramePass(), vertexBindings);
+	depthPassTechnique = new TechniqueVulkan(_renderHandle, depthPassShaders, _renderHandle->getFramePass(), _renderHandle->getFramePassLayout(), vertexBindings);
+	renderPassTechnique = new TechniqueVulkan(_renderHandle, renderPassShaders, _renderHandle->getFramePass(), _renderHandle->getFramePassLayout(), vertexBindings);
 
 	// Define viewport
 	shadowMapViewport.x = 0;
@@ -203,9 +203,10 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 }
 
 
-void ShadowScene::frame(VkCommandBuffer cmdBuf)
+void ShadowScene::frame()
 {
-	_renderHandle->beginFramePass(&shadowMapFrameBuffer);
+
+	VkCommandBuffer cmdBuf = _renderHandle->beginFramePass(&shadowMapFrameBuffer);
 
 	// Shadow map pass
 	vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, depthPassTechnique->pipeline);
@@ -214,8 +215,8 @@ void ShadowScene::frame(VkCommandBuffer cmdBuf)
 
 	vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayoutConstruct._layout, 0, 1, &shadowPassDescriptorSet, 0, nullptr);
 
-	positionBufferBinding.bind(0);
-	normalBufferBinding.bind(0);
+	positionBufferBinding.bind(cmdBuf, 0);
+	normalBufferBinding.bind(cmdBuf, 0);
 	vkCmdDraw(cmdBuf, positionBufferBinding.numElements, 1, 0, 0);
 
 

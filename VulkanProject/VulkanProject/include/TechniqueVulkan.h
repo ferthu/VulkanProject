@@ -14,14 +14,14 @@ public:
 	TechniqueVulkan(VulkanRenderer* renderer, ShaderVulkan* sHandle, VkPipelineLayout layout);
 	/* Generate a graphics pipeline technique
 	*/
-	TechniqueVulkan(VulkanRenderer* renderer, ShaderVulkan* sHandle, VkRenderPass renderPass, VkPipelineVertexInputStateCreateInfo &vertexInputState);
+	TechniqueVulkan(VulkanRenderer* renderer, ShaderVulkan* sHandle, VkRenderPass renderPass, VkPipelineLayout layout, VkPipelineVertexInputStateCreateInfo &vertexInputState);
 	virtual ~TechniqueVulkan();
 	virtual void bind(VkCommandBuffer cmdBuf, VkPipelineBindPoint bindPoint);
 
 	VkPipeline pipeline;
 
 private:
-	void createGraphicsPipeline(VkPipelineVertexInputStateCreateInfo &vertexInputState);
+	void createGraphicsPipeline(VkPipelineLayout layout, VkPipelineVertexInputStateCreateInfo &vertexInputState);
 	void createComputePipeline(VkPipelineLayout layout);
 
 	VulkanRenderer *_renderHandle;

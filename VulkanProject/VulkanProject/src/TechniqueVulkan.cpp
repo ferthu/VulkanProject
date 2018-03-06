@@ -12,10 +12,10 @@ TechniqueVulkan::TechniqueVulkan(VulkanRenderer* renderer, ShaderVulkan* sHandle
 {
 	createComputePipeline(layout);
 }
-TechniqueVulkan::TechniqueVulkan( VulkanRenderer* renderer, ShaderVulkan* sHandle, VkRenderPass renderPass, VkPipelineVertexInputStateCreateInfo &vertexInputState)
+TechniqueVulkan::TechniqueVulkan( VulkanRenderer* renderer, ShaderVulkan* sHandle, VkRenderPass renderPass, VkPipelineLayout layout, VkPipelineVertexInputStateCreateInfo &vertexInputState)
 	: _sHandle(sHandle), _renderHandle(renderer), _passHandle(renderPass)
 {
-	createGraphicsPipeline(vertexInputState);
+	createGraphicsPipeline(layout, vertexInputState);
 }
 
 TechniqueVulkan::~TechniqueVulkan()
@@ -28,7 +28,7 @@ void TechniqueVulkan::bind(VkCommandBuffer cmdBuf, VkPipelineBindPoint bindPoint
 	vkCmdBindPipeline(cmdBuf, bindPoint, pipeline);
 }
 
-void TechniqueVulkan::createGraphicsPipeline(VkPipelineVertexInputStateCreateInfo &vertexInputState)
+void TechniqueVulkan::createGraphicsPipeline(VkPipelineLayout layout, VkPipelineVertexInputStateCreateInfo &vertexInputState)
 {
 	assert(_sHandle);
 	VkPipelineShaderStageCreateInfo stages[2];
@@ -82,7 +82,7 @@ void TechniqueVulkan::createGraphicsPipeline(VkPipelineVertexInputStateCreateInf
 	pipelineInfo.pDepthStencilState = &depthStencil;
 	pipelineInfo.pColorBlendState = &pipelineColorBlendStateCreateInfo;
 	pipelineInfo.pDynamicState = nullptr;
-	pipelineInfo.layout = _renderHandle->getRenderPassLayout();
+	pipelineInfo.layout = layout;
 	pipelineInfo.renderPass = _passHandle;
 	pipelineInfo.subpass = 0;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;

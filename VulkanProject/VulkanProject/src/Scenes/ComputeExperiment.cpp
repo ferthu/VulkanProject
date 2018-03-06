@@ -121,13 +121,13 @@ void ComputeExperiment::makeTechnique()
 	};
 	VkPipelineVertexInputStateCreateInfo vertexBindings =
 		defineVertexBufferBindings(vertexBufferBindings, NUM_BUFFER, vertexAttributes, NUM_ATTRI);
-	techniqueA = new TechniqueVulkan(_renderHandle, triShader, _renderHandle->getFramePass(), vertexBindings);
+	techniqueA = new TechniqueVulkan(_renderHandle, triShader, _renderHandle->getFramePass(), _renderHandle->getFramePassLayout(), vertexBindings);
 }
-void ComputeExperiment::frame(VkCommandBuffer cmdBuf)
+void ComputeExperiment::frame()
 {
 
 	// Main render pass
-	_renderHandle->beginFramePass();
+	VkCommandBuffer cmdBuf = _renderHandle->beginFramePass();
 	/*
 	vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, techniqueA->pipeline);
 
@@ -143,9 +143,8 @@ void ComputeExperiment::frame(VkCommandBuffer cmdBuf)
 
 
 	// Post pass
-	VkCommandBuffer compBuf = _renderHandle->getComputeBuf();
 	uint32_t swapIndex = _renderHandle->getSwapChainIndex();
-	_renderHandle->beginCompute();
+	VkCommandBuffer compBuf = _renderHandle->beginCompute();
 	transition_ComputeToPost(compBuf, _renderHandle->getSwapChainImg(swapIndex), _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
 
 	// Bind compute shader

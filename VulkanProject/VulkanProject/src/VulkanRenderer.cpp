@@ -427,12 +427,7 @@ void VulkanRenderer::nextFrame()
 	beginCmdBuf(_transferCmd[getTransferIndex()]);
 }
 
-void VulkanRenderer::beginFramePass()
-{
-	beginFramePass(nullptr);
-}
-
-void VulkanRenderer::beginFramePass(VkFramebuffer* frameBuffer)
+VkCommandBuffer VulkanRenderer::beginFramePass(VkFramebuffer* frameBuffer)
 {
 	vkQueueWaitIdle(queues[QueueType::GRAPHIC].queue);
 	VkResult err = vkResetCommandBuffer(_frameCmdBuf, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
@@ -458,6 +453,8 @@ void VulkanRenderer::beginFramePass(VkFramebuffer* frameBuffer)
 	renderPassInfo.pClearValues = clearValues;
 
 	vkCmdBeginRenderPass(_frameCmdBuf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	return _frameCmdBuf;
 }
 
 void VulkanRenderer::submitFramePass()
@@ -486,9 +483,10 @@ void VulkanRenderer::submitFramePass()
 	if (err != VK_SUCCESS) {
 		throw std::runtime_error("Failed to submit draw command buffer!");
 	}
+
 }
 
-void VulkanRenderer::beginCompute()
+VkCommandBuffer VulkanRenderer::beginCompute()
 {
 	vkQueueWaitIdle(queues[QueueType::COMPUTE].queue);
 	VkResult err = vkResetCommandBuffer(_computeCmdBuf, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
@@ -496,6 +494,7 @@ void VulkanRenderer::beginCompute()
 		std::cout << "Command buff reset err\n";
 	// Begin recording frame commands
 	beginCmdBuf(_computeCmdBuf,  VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	return _computeCmdBuf;
 }
 void VulkanRenderer::submitCompute()
 {
@@ -537,7 +536,7 @@ void VulkanRenderer::frame()
 
 
 	// Draw stuff..?:)
-	scene->frame(_frameCmdBuf);
+	scene->frame();
 
 
 }
@@ -821,23 +820,15 @@ void VulkanRenderer::allocateImageMemory(MemoryPool type, VkImage &image, VkForm
 
 #pragma region Get & Set Stuff
 
-VkPipelineLayout VulkanRenderer::getRenderPassLayout()
-{
-	return pipelineLayout;
-}
-VkCommandBuffer VulkanRenderer::getFrameCmdBuf()
-{
-	return _frameCmdBuf;
-}
-
-VkCommandBuffer VulkanRenderer::getComputeBuf()
-{
-	return _computeCmdBuf;
-}
 
 VkRenderPass VulkanRenderer::getFramePass()
 {
 	return frameBufferPass;
+}
+
+VkPipelineLayout VulkanRenderer::getFramePassLayout()
+{
+	return pipelineLayout;
 }
 
 VkDevice VulkanRenderer::getDevice()

@@ -15,7 +15,7 @@ int main(int argc, const char* argv)
 	VulkanRenderer renderer;
 	renderer.initialize( new ComputeExperiment(), 1024, 1024);
 	//renderer.initialize(new ComputeScene(), 512, 512);
-
+	//renderer.initialize(new TriangleScene(), 512, 512);
 	SDL_Event windowEvent;
 	while (true)
 	{

@@ -15,7 +15,7 @@ public:
 	ComputeScene();
 	~ComputeScene();
 
-	virtual void frame(VkCommandBuffer cmdBuf);
+	virtual void frame();
 	virtual void initialize(VulkanRenderer *handle);
 	virtual void defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout);
 	virtual VkRenderPass defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat);
