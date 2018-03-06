@@ -15,8 +15,7 @@ class ComputeScene :
 public:
 
 	enum Mode {
-		Sequential,
-		SyncSequential
+		Sequential
 	};
 
 	ComputeScene(Mode mode = Sequential);

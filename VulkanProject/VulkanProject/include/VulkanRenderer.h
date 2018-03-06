@@ -16,6 +16,8 @@
 #include "ShaderVulkan.h"
 #include "TechniqueVulkan.h"
 
+/* Remember!!! number of device allocations is limited (very).
+*/
 struct DevMemoryAllocation
 {
 	VkDeviceMemory handle;	// The device memory handle
@@ -132,7 +134,7 @@ private:
 	int chosenPhysicalDevice;
 	VkPhysicalDevice physicalDevice;
 	VkPhysicalDeviceProperties deviceProperties;
-	std::vector<DevMemoryAllocation> memPool;// Memory pool of device memory
+	std::vector<DevMemoryAllocation> memPool;// Memory pool of device memory. Remember!!! number of device allocations is limited (very).
 
 	bool globalWireframeMode = false;
 

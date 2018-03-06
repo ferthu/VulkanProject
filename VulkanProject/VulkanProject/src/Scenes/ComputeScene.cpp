@@ -152,11 +152,7 @@ void ComputeScene::post()
 
 void ComputeScene::frame()
 {
-	if (mode == Mode::SyncSequential)
-	{
-
-	}
-	else // Mode::Sequential
+	if (mode == Mode::Sequential)
 	{
 		mainPass();
 		post();

@@ -20,7 +20,7 @@ void main() {
     }
     arr[i] = sqrt(sum * arr[i-1]);
   }
-  arr[N-1] /= 1000.f;
+  arr[N-1] /= 100.f;
   vec4 pixel = vec4(arr[N-1], arr[N-1], arr[N-1], 1.f);
   // output to a specific pixel in the image
   imageStore(img_output, pixel_coords, pixel);

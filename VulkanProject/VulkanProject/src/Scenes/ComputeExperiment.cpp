@@ -123,6 +123,7 @@ void ComputeExperiment::makeTechnique()
 		defineVertexBufferBindings(vertexBufferBindings, NUM_BUFFER, vertexAttributes, NUM_ATTRI);
 	techniqueA = new TechniqueVulkan(_renderHandle, triShader, _renderHandle->getFramePass(), _renderHandle->getFramePassLayout(), vertexBindings);
 }
+
 void ComputeExperiment::frame()
 {
 
@@ -146,7 +147,7 @@ void ComputeExperiment::frame()
 	info = _renderHandle->beginCompute();
 	transition_ComputeToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
 
-	// Bind compute shader
+	// Dispatch frame compute shader
 	techniquePost->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	// Bind resources
 	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
@@ -154,11 +155,13 @@ void ComputeExperiment::frame()
 	uint32_t dim = 1024 / 16;
 	vkCmdDispatch(info._buf, dim, dim, 1);
 	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
-	
 
+	if (mode == Mode::SEQUENTIAL)
+		serializeCommandBuffer(info._buf);
+	
+	// Dispatch compute operation
 	techniqueSmallOp->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	smallOpBuf->bind(info._buf, smallOpLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
-	// Dispatch
 	dim = NUM_PARTICLE / 256;
 	vkCmdDispatch(info._buf, dim, 1, 1);
 	

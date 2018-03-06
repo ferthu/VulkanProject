@@ -1,9 +1,13 @@
+Notation:
+- : incomplete sub task
+x : complete sub task
+
 Todo:
 
 /M
 Build versions of compute experiment.
 	- Memory dependent RegLimited task (use image reads somehow)
-	- Sequential execution
+	x Sequential execution
 Gaussian blur compute pass
 Allow compute pass to overlap frame
 Async. compute settings

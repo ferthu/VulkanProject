@@ -17,6 +17,8 @@ public:
 	enum Mode
 	{
 		REG_LIMITED,
+		MEM_CONSUMPTION,
+		SEQUENTIAL
 	};
 	
 	ComputeExperiment(Mode mode = REG_LIMITED, size_t num_particles = 1024 * 512);

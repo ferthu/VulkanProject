@@ -204,14 +204,19 @@ void endSingleCommand_Wait(VkDevice device, VkQueue queue, VkCommandPool command
 void releaseCommandBuffer(VkDevice device, VkQueue queue, VkCommandPool commandPool, VkCommandBuffer commandBuf);
 void releaseCommandBuffer(VkDevice device, VkQueue queue, VkCommandPool commandPool, VkCommandBuffer* commandBuf, uint32_t numCmdBuf);
 
-// Add pipeline barrier for an image transition
-void cmdImageTransition(VkCommandBuffer cmdBuf, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage, VkImageMemoryBarrier &barrier);
 
 /* Synchronization */
+
 
 VkSemaphore createSemaphore(VkDevice device);
 VkFence createFence(VkDevice device, bool signaled = false);
 void waitFence(VkDevice device, VkFence fence);
+
+
+// Add pipeline barrier for an image transition
+void cmdImageTransition(VkCommandBuffer cmdBuf, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage, VkImageMemoryBarrier &barrier);
+// Insert serialization in the command buffer (pipeline).
+void serializeCommandBuffer(VkCommandBuffer cmdBuf);
 
 #pragma region Descriptors
 
@@ -600,6 +605,8 @@ std::vector<const char*> checkValidationLayerSupport(const char** validationLaye
 
 #pragma endregion
 
+#pragma region Synchronization
+
 /* Create a semaphore
 */
 VkSemaphore createSemaphore(VkDevice device) {
@@ -637,6 +644,71 @@ void waitFence(VkDevice device, VkFence fence)
 	{	}
 	vkResetFences(device, 1, &fence);
 }
+
+/* Serialize the command buffer pipeline by introducing a memory dependency on all stages.
+cmdBuf	<<	Command buffer to serialize
+*/
+void serializeCommandBuffer(VkCommandBuffer cmdBuf)
+{
+	VkMemoryBarrier memBarrier;
+	memBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+	memBarrier.pNext = nullptr;
+	memBarrier.srcAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
+		VK_ACCESS_INDEX_READ_BIT |
+		VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
+		VK_ACCESS_UNIFORM_READ_BIT |
+		VK_ACCESS_INPUT_ATTACHMENT_READ_BIT |
+		VK_ACCESS_SHADER_READ_BIT |
+		VK_ACCESS_SHADER_WRITE_BIT |
+		VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+		VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+		VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+		VK_ACCESS_TRANSFER_READ_BIT |
+		VK_ACCESS_TRANSFER_WRITE_BIT |
+		VK_ACCESS_HOST_READ_BIT |
+		VK_ACCESS_HOST_WRITE_BIT;
+	memBarrier.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
+		VK_ACCESS_INDEX_READ_BIT |
+		VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
+		VK_ACCESS_UNIFORM_READ_BIT |
+		VK_ACCESS_INPUT_ATTACHMENT_READ_BIT |
+		VK_ACCESS_SHADER_READ_BIT |
+		VK_ACCESS_SHADER_WRITE_BIT |
+		VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+		VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+		VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+		VK_ACCESS_TRANSFER_READ_BIT |
+		VK_ACCESS_TRANSFER_WRITE_BIT |
+		VK_ACCESS_HOST_READ_BIT |
+		VK_ACCESS_HOST_WRITE_BIT;
+
+	vkCmdPipelineBarrier(
+		cmdBuf,
+		VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,		// srcStageMask
+		VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,		// dstStageMask
+		0, 1,									// dependency bit, memoryBarrierCount
+		&memBarrier,							// pMemoryBarriers
+		0, NULL,								// Buffer mem. barriers
+		0, NULL);								// Image mem. barriers
+}
+/* Add pipeline barrier for an image transition
+*/
+void cmdImageTransition(VkCommandBuffer cmdBuf, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage, VkImageMemoryBarrier &barrier)
+{
+	vkCmdPipelineBarrier(
+		cmdBuf,
+		sourceStage, destinationStage,
+		0,
+		0, nullptr,
+		0, nullptr,
+		1, &barrier
+	);
+}
+
+#pragma endregion
+
 /* Define creation of a single queue of the family type.
 family	<<	Queue family index
 prio	<<	Priority of commands submitted in the queue
@@ -1391,19 +1463,6 @@ void releaseCommandBuffer(VkDevice device, VkQueue queue, VkCommandPool commandP
 }
 
 
-/* Add pipeline barrier for an image transition
-*/
-void cmdImageTransition(VkCommandBuffer cmdBuf, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage, VkImageMemoryBarrier &barrier)
-{
-	vkCmdPipelineBarrier(
-		cmdBuf,
-		sourceStage, destinationStage,
-		0,
-		0, nullptr,
-		0, nullptr,
-		1, &barrier
-	);
-}
 
 #pragma endregion
 
