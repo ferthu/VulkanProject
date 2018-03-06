@@ -36,7 +36,7 @@ enum MemoryPool
 
 const int MAX_DESCRIPTOR_POOLS = 12;
 // Size in bytes of the memory types used
-const uint32_t STORAGE_SIZE[(int)MemoryPool::Count] = { 2048 * 2048, 1024*1024, 2048 * 2048, 1024 * 1024, 1024 * 1024, 1024 * 1024 * 10 };
+const uint32_t STORAGE_SIZE[(int)MemoryPool::Count] = { 2048 * 2048*16, 2048 * 2048*16, 2048 * 2048, 1024 * 1024, 1024 * 1024, 1024 * 1024 * 10 };
 
 
 class Scene;
@@ -90,8 +90,8 @@ public:
 	VkDescriptorSet generateDescriptor(VkDescriptorType type, uint32_t set_binding);
 
 	/* Transfer data to the specific buffer. */
-	void transferBufferData(VkBuffer buffer, const void* data, size_t size, size_t offset);
-	void transferBufferInitial(VkBuffer buffer, const void* data, size_t size, size_t offset);
+	void transferBufferData(VkBuffer buffer, const void* data, size_t byteSize, size_t offset);
+	void transferBufferInitial(VkBuffer buffer, const void* data, size_t byteSize, size_t offset);
 	void transferImageData(VkImage image, const void* data, glm::uvec3 img_size, uint32_t pixel_bytes, glm::ivec3 offset = glm::ivec3(0));
 	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout fromLayout, VkImageLayout toLayout);
 

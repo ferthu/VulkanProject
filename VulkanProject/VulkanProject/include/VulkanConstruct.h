@@ -217,11 +217,8 @@ void waitFence(VkDevice device, VkFence fence);
 void writeDescriptorStruct_IMG(VkWriteDescriptorSet &writeInfo, VkDescriptorSet dstSet, uint32_t dstBinding, uint32_t dstArrayElem, uint32_t descriptorCount, VkDescriptorType type, VkDescriptorImageInfo *imageInfo);
 void writeDescriptorStruct_IMG_COMBINED(VkWriteDescriptorSet &writeInfo, VkDescriptorSet dstSet, uint32_t dstBinding, uint32_t dstArrayElem, uint32_t descriptorCount, VkDescriptorImageInfo *imageInfo);
 void writeDescriptorStruct_IMG_STORAGE(VkWriteDescriptorSet &writeInfo, VkDescriptorSet dstSet, uint32_t dstBinding, uint32_t dstArrayElem, uint32_t descriptorCount, VkDescriptorImageInfo *imageInfo);
-/* Fill a VkWriteDescriptorSet with VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER write info.
-*/
+void writeDescriptorStruct_BUFFER(VkWriteDescriptorSet &writeInfo, VkDescriptorSet dstSet, uint32_t dstBinding, uint32_t dstArrayElem, uint32_t descriptorCount, VkDescriptorType usage, VkDescriptorBufferInfo* bufferInfo);
 void writeDescriptorStruct_UNI_BUFFER(VkWriteDescriptorSet &writeInfo, VkDescriptorSet dstSet, uint32_t dstBinding, uint32_t dstArrayElem, uint32_t descriptorCount, VkDescriptorBufferInfo* bufferInfo);
-/* Write a image layout binding
-*/
 void writeLayoutBinding(VkDescriptorSetLayoutBinding &layoutBinding, uint32_t binding, VkDescriptorType type, VkShaderStageFlags stage);
 /* Create a VkDescriptorSetLayout from the bindings.
 */
@@ -1483,6 +1480,27 @@ void writeDescriptorStruct_UNI_BUFFER(VkWriteDescriptorSet &writeInfo, VkDescrip
 	writeInfo.dstArrayElement = dstArrayElem;
 	writeInfo.descriptorCount = descriptorCount;
 	writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	writeInfo.pImageInfo = nullptr;
+	writeInfo.pBufferInfo = bufferInfo;
+	writeInfo.pTexelBufferView = nullptr;
+}
+/* Fill a VkWriteDescriptorSet with VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER write info.
+writeInfo		<<	Struct filled with the params.
+dstSet			<<	Destination descriptor set (set updated)
+dstBinding		<<	Descriptor binding within the set that is updated.
+dstArrayElement	<<	Destination element within the array.
+descriptorCount	<<	Number of descriptors updated (number of elements in the bufferInfo array)
+usage			<<	Descriptor type
+bufferInfo		<<	Array of VkDescriptorBufferInfo updated within the descriptor set.
+*/
+void writeDescriptorStruct_BUFFER(VkWriteDescriptorSet &writeInfo, VkDescriptorSet dstSet, uint32_t dstBinding, uint32_t dstArrayElem, uint32_t descriptorCount, VkDescriptorType usage, VkDescriptorBufferInfo* bufferInfo)
+{
+	writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	writeInfo.dstSet = dstSet;
+	writeInfo.dstBinding = dstBinding;
+	writeInfo.dstArrayElement = dstArrayElem;
+	writeInfo.descriptorCount = descriptorCount;
+	writeInfo.descriptorType = usage;
 	writeInfo.pImageInfo = nullptr;
 	writeInfo.pBufferInfo = bufferInfo;
 	writeInfo.pTexelBufferView = nullptr;

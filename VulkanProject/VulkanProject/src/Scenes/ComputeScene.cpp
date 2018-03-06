@@ -15,7 +15,7 @@ ComputeScene::~ComputeScene()
 	delete triBuffer;
 
 	delete techniquePost;
-	delete computeShader;
+	delete compShader;
 	delete readImg;
 	delete readSampler;
 	postLayout.destroy(_renderHandle->getDevice());
@@ -57,9 +57,9 @@ void ComputeScene::initialize(VulkanRenderer *handle)
 	postLayout.construct(_renderHandle->getDevice());
 
 
-	computeShader = new ShaderVulkan("CopyCompute", _renderHandle);
-	computeShader->setShader("resource/Compute/CopyTexture.glsl", ShaderVulkan::ShaderType::CS);
-	computeShader->compileMaterial(err);
+	compShader = new ShaderVulkan("CopyCompute", _renderHandle);
+	compShader->setShader("resource/Compute/CopyTexture.glsl", ShaderVulkan::ShaderType::CS);
+	compShader->compileMaterial(err);
 
 	// Img source
 	readSampler = new Sampler2DVulkan(_renderHandle);
@@ -89,7 +89,7 @@ void ComputeScene::initialize(VulkanRenderer *handle)
 void ComputeScene::makeTechnique()
 {
 
-	techniquePost = new TechniqueVulkan(_renderHandle, computeShader, postLayout._layout);
+	techniquePost = new TechniqueVulkan(_renderHandle, compShader, postLayout._layout);
 
 	const uint32_t NUM_BUFFER = 1;
 	const uint32_t NUM_ATTRI = 1;

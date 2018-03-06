@@ -101,7 +101,7 @@ void TechniqueVulkan::createComputePipeline(VkPipelineLayout layout)
 	info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 	info.pNext = NULL;
 	info.flags = 0;
-	info.stage = defineShaderStage(VK_SHADER_STAGE_COMPUTE_BIT, _sHandle->computeShader);
+	info.stage = defineShaderStage(VK_SHADER_STAGE_COMPUTE_BIT, _sHandle->compShader);
 	info.layout = layout;
 	info.basePipelineHandle = NULL;
 	info.basePipelineIndex = 0;

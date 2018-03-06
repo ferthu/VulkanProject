@@ -25,8 +25,8 @@ void ShaderVulkan::destroyShaderObjects()
 		vkDestroyShaderModule(_renderHandle->getDevice(), vertexShader, nullptr);
 	if (fragmentShader)
 		vkDestroyShaderModule(_renderHandle->getDevice(), fragmentShader, nullptr);
-	if (computeShader)
-		vkDestroyShaderModule(_renderHandle->getDevice(), computeShader, nullptr);
+	if (compShader)
+		vkDestroyShaderModule(_renderHandle->getDevice(), compShader, nullptr);
 }
 
 void ShaderVulkan::setShader(const std::string & shaderFileName, ShaderType type)
@@ -66,7 +66,7 @@ int ShaderVulkan::createComputeShader()
 		std::string spvFile = runCompiler(ShaderVulkan::ShaderType::CS, tmpFile);
 		csData = loadSPIR_V(spvFile);
 	}
-	computeShader = createShaderModule(_renderHandle->getDevice(), reinterpret_cast<uint32_t*>(csData.data()), csData.size());
+	compShader = createShaderModule(_renderHandle->getDevice(), reinterpret_cast<uint32_t*>(csData.data()), csData.size());
 
 	return 0;
 }

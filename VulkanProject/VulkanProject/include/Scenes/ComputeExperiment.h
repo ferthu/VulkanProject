@@ -8,11 +8,18 @@
 #include "Texture2DVulkan.h"
 #include "Sampler2DVulkan.h"
 
+
 class ComputeExperiment :
 	public Scene
 {
 public:
-	ComputeExperiment();
+	
+	enum Mode
+	{
+		REG_LIMITED,
+	};
+	
+	ComputeExperiment(Mode mode = REG_LIMITED, size_t num_particles = 1024 * 512);
 	~ComputeExperiment();
 
 	virtual void frame(VkCommandBuffer cmdBuf);
@@ -21,6 +28,8 @@ public:
 	virtual VkRenderPass defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat);
 
 private:
+	Mode mode;
+	size_t NUM_PARTICLE;
 
 	void makeTechnique();
 
@@ -31,9 +40,10 @@ private:
 	VertexBufferVulkan::Binding triVertexBinding;
 
 	// Post pass
-	TechniqueVulkan * techniquePost;
-	vk::LayoutConstruct postLayout;
-	ShaderVulkan *computeShader;
+	TechniqueVulkan * techniquePost, *techniqueSmallOp;
+	vk::LayoutConstruct postLayout, smallOpLayout;
+	ShaderVulkan *compShader, *compSmallOp;
+	ConstantBufferVulkan *smallOpBuf;
 	std::vector<VkDescriptorSet> swapChainImgDesc;
 };
 
