@@ -202,6 +202,7 @@ VkCommandBuffer beginSingleCommand(VkDevice device, VkCommandPool commandPool);
 void endSingleCommand(VkDevice device, VkQueue queue, VkCommandBuffer commandBuf, VkFence fence = VK_NULL_HANDLE);
 void endSingleCommand_Wait(VkDevice device, VkQueue queue, VkCommandPool commandPool, VkCommandBuffer commandBuf);
 void releaseCommandBuffer(VkDevice device, VkQueue queue, VkCommandPool commandPool, VkCommandBuffer commandBuf);
+void releaseCommandBuffer(VkDevice device, VkQueue queue, VkCommandPool commandPool, VkCommandBuffer* commandBuf, uint32_t numCmdBuf);
 
 // Add pipeline barrier for an image transition
 void cmdImageTransition(VkCommandBuffer cmdBuf, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage, VkImageMemoryBarrier &barrier);
@@ -1380,6 +1381,13 @@ void releaseCommandBuffer(VkDevice device, VkQueue queue, VkCommandPool commandP
 {
 	vkQueueWaitIdle(queue);		// Wait until the copy is complete
 	vkFreeCommandBuffers(device, commandPool, 1, &commandBuf);
+}
+/* Wait for queue to idle then release multiple command buffers.
+*/
+void releaseCommandBuffer(VkDevice device, VkQueue queue, VkCommandPool commandPool, VkCommandBuffer* commandBuf, uint32_t numCmdBuf)
+{
+	vkQueueWaitIdle(queue);		// Wait until the copy is complete
+	vkFreeCommandBuffers(device, commandPool, numCmdBuf, commandBuf);
 }
 
 

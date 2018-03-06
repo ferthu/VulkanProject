@@ -8,11 +8,18 @@
 #include "Texture2DVulkan.h"
 #include "Sampler2DVulkan.h"
 
+
 class ComputeScene :
 	public Scene
 {
 public:
-	ComputeScene();
+
+	enum Mode {
+		Sequential,
+		SyncSequential
+	};
+
+	ComputeScene(Mode mode = Sequential);
 	~ComputeScene();
 
 	virtual void frame();
@@ -22,7 +29,12 @@ public:
 
 private:
 
+	Mode mode;
+
 	void makeTechnique();
+
+	void mainPass();
+	void post();
 
 	// Render pass
 	ShaderVulkan *triShader;

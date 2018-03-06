@@ -283,7 +283,8 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 
 	// Stuff
 	imageAvailable = createSemaphore(device);
-	renderFinished = createSemaphore(device);
+	renderFinished[0] = createSemaphore(device);
+	renderFinished[1] = createSemaphore(device);
 	computeFinished = createSemaphore(device);
 	_transferFences[0] = createFence(device, true);
 	_transferFences[1] = createFence(device, false);
@@ -303,7 +304,8 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	//Begin initial transfer command
 	_transferCmd[0] = allocateCmdBuf(device, queues[QueueType::MEM].pool);
 	_transferCmd[1] = allocateCmdBuf(device, queues[QueueType::MEM].pool);
-	_frameCmdBuf = allocateCmdBuf(device, queues[QueueType::GRAPHIC].pool);
+	_frameCmdBuf[0] = allocateCmdBuf(device, queues[QueueType::GRAPHIC].pool);
+	_frameCmdBuf[1] = allocateCmdBuf(device, queues[QueueType::GRAPHIC].pool);
 	_computeCmdBuf = allocateCmdBuf(device, queues[QueueType::COMPUTE].pool);
 
 	// Our scene implementation
@@ -322,7 +324,7 @@ int VulkanRenderer::beginShutdown()
 {
 	endSingleCommand_Wait(device, queues[QueueType::MEM].queue, queues[QueueType::MEM].pool, _transferCmd[getTransferIndex()]);
 	releaseCommandBuffer(device, queues[QueueType::MEM].queue, queues[QueueType::MEM].pool, _transferCmd[getFrameIndex()]);
-	releaseCommandBuffer(device, queues[QueueType::GRAPHIC].queue, queues[QueueType::GRAPHIC].pool, _frameCmdBuf);
+	releaseCommandBuffer(device, queues[QueueType::GRAPHIC].queue, queues[QueueType::GRAPHIC].pool, _frameCmdBuf, 2);
 	// Wait for device to finish before shuting down..
 	vkDeviceWaitIdle(device);
 	return 0;
@@ -345,7 +347,8 @@ int VulkanRenderer::shutdown()
 	// Destroy command pools
 	queues.destroy(device);
 
-	vkDestroySemaphore(device, renderFinished, nullptr);
+	vkDestroySemaphore(device, renderFinished[0], nullptr);
+	vkDestroySemaphore(device, renderFinished[1], nullptr);
 	vkDestroySemaphore(device, computeFinished, nullptr);
 	vkDestroySemaphore(device, imageAvailable, nullptr);
 	vkDestroyFence(device, _transferFences[0], nullptr);
@@ -398,7 +401,7 @@ void VulkanRenderer::present(bool waitRender, bool waitCompute)
 	VkSemaphore wait[2];
 	uint32_t numWait = 0;
 	if (waitRender)
-		wait[numWait++] = renderFinished;
+		wait[numWait++] = renderFinished[getFrameIndex()];
 	if (waitCompute)
 		wait[numWait++] = computeFinished;
 	presentInfo.waitSemaphoreCount = numWait;
@@ -429,12 +432,12 @@ void VulkanRenderer::nextFrame()
 
 VulkanRenderer::FrameInfo VulkanRenderer::beginFramePass(VkFramebuffer* frameBuffer)
 {
-	vkQueueWaitIdle(queues[QueueType::GRAPHIC].queue);
-	VkResult err = vkResetCommandBuffer(_frameCmdBuf, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+	VkCommandBuffer cmdBuf = _frameCmdBuf[getFrameIndex()];
+	VkResult err = vkResetCommandBuffer(cmdBuf, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 	if (err)
 		std::cout << "Command buff reset err\n";
 	// Begin recording frame commands
-	beginCmdBuf(_frameCmdBuf, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	beginCmdBuf(cmdBuf, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
 	//Render pass
 	VkRenderPassBeginInfo renderPassInfo = {};
@@ -452,10 +455,10 @@ VulkanRenderer::FrameInfo VulkanRenderer::beginFramePass(VkFramebuffer* frameBuf
 	renderPassInfo.clearValueCount = num_clear_values;
 	renderPassInfo.pClearValues = clearValues;
 
-	vkCmdBeginRenderPass(_frameCmdBuf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdBeginRenderPass(cmdBuf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 	FrameInfo info;
-	info._buf = _frameCmdBuf;
+	info._buf = cmdBuf;
 	info._swapChainIndex = swapChainImgIndex;
 	info._swapChainImage = swapchainImages[swapChainImgIndex];
 	return info;
@@ -464,14 +467,15 @@ VulkanRenderer::FrameInfo VulkanRenderer::beginFramePass(VkFramebuffer* frameBuf
 void VulkanRenderer::submitFramePass()
 {
 
-	vkCmdEndRenderPass(_frameCmdBuf);
-	if (vkEndCommandBuffer(_frameCmdBuf) != VK_SUCCESS) {
+	VkCommandBuffer cmdBuf = _frameCmdBuf[getFrameIndex()];
+	vkCmdEndRenderPass(cmdBuf);
+	if (vkEndCommandBuffer(cmdBuf) != VK_SUCCESS) {
 		throw std::runtime_error("failed to record command buffer!");
 	}
 
 	// Submit
 	VkSemaphore waitSemaphores[] = { imageAvailable };
-	VkSemaphore signalSemaphores[] = { renderFinished };
+	VkSemaphore signalSemaphores[] = { renderFinished[getFrameIndex()] };
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
 	VkSubmitInfo submitInfo = {};
@@ -480,7 +484,7 @@ void VulkanRenderer::submitFramePass()
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;	// Mask stage where related semaphore is waited for.
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &_frameCmdBuf;
+	submitInfo.pCommandBuffers = &cmdBuf;
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 	VkResult err = vkQueueSubmit(queues[QueueType::GRAPHIC].queue, 1, &submitInfo, VK_NULL_HANDLE);
@@ -512,7 +516,7 @@ void VulkanRenderer::submitCompute()
 	}
 
 	// Submit
-	VkSemaphore waitSemaphores[] = { renderFinished };
+	VkSemaphore waitSemaphores[] = { renderFinished[getFrameIndex()] };
 	VkSemaphore signalSemaphores[] = { computeFinished };
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
 
@@ -523,7 +527,7 @@ void VulkanRenderer::submitCompute()
 	submitInfo.pWaitDstStageMask = waitStages;		// Mask stage where related semaphore is waited for.
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &_computeCmdBuf;
-	submitInfo.signalSemaphoreCount = (uint32_t)std::size(signalSemaphores);;
+	submitInfo.signalSemaphoreCount = (uint32_t)std::size(signalSemaphores);
 	submitInfo.pSignalSemaphores = signalSemaphores;
 	VkResult err = vkQueueSubmit(queues[QueueType::COMPUTE].queue, 1, &submitInfo, VK_NULL_HANDLE);
 	if (err != VK_SUCCESS) {

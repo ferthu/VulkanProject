@@ -3,7 +3,8 @@
 #include "Stuff/RandomGenerator.h"
 #include "VulkanConstruct.h"
 
-ComputeScene::ComputeScene()
+ComputeScene::ComputeScene(Mode mode)
+	: mode(mode)
 {
 }
 
@@ -109,9 +110,10 @@ void ComputeScene::makeTechnique()
 		defineVertexBufferBindings(vertexBufferBindings, NUM_BUFFER, vertexAttributes, NUM_ATTRI);
 	techniqueA = new TechniqueVulkan(_renderHandle, triShader, _renderHandle->getFramePass(), _renderHandle->getFramePassLayout(), vertexBindings);
 }
-void ComputeScene::frame()
-{
 
+
+void ComputeScene::mainPass()
+{
 	// Main render pass
 	VulkanRenderer::FrameInfo info = _renderHandle->beginFramePass();
 
@@ -127,9 +129,11 @@ void ComputeScene::frame()
 	// Finish
 	_renderHandle->submitFramePass();
 
-
+}
+void ComputeScene::post()
+{
 	// Post pass
-	info = _renderHandle->beginCompute();
+	VulkanRenderer::FrameInfo info = _renderHandle->beginCompute();
 	transition_ComputeToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
 
 	// Bind compute shader
@@ -145,6 +149,20 @@ void ComputeScene::frame()
 	
 	_renderHandle->present(false, true);
 }
+
+void ComputeScene::frame()
+{
+	if (mode == Mode::SyncSequential)
+	{
+
+	}
+	else // Mode::Sequential
+	{
+		mainPass();
+		post();
+	}
+}
+
 
 
 void ComputeScene::defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout)
@@ -167,11 +185,7 @@ VkRenderPass ComputeScene::defineRenderPass(VkDevice device, VkFormat swapchainF
 	VkAttachmentReference depthAttachmentRef = {};
 	depthAttachmentRef.attachment = 1;
 	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-	VkAttachmentReference postAttachmentRef = {};
-	postAttachmentRef.attachment = 0;
-	postAttachmentRef.layout = VK_IMAGE_LAYOUT_GENERAL;
-
+	
 	const uint32_t NUM_SUBPASS = 1;
 	VkSubpassDescription subpass[NUM_SUBPASS];
 	subpass[0].flags = 0;

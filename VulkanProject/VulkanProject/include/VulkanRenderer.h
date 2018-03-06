@@ -62,12 +62,15 @@ public:
 	void frame();
 	void present(bool waitRender, bool waitCompute);
 
-	// Initiate frame pass
-	void beginFramePass();
+	struct FrameInfo
+	{
+		VkCommandBuffer _buf;
+		uint32_t _swapChainIndex;
+		VkImage _swapChainImage;
+	};
 	// Begins a frame pass with a supplied custom frame buffer
-	void beginFramePass(VkFramebuffer* frameBuffer);
-
-	void beginCompute();
+	FrameInfo beginFramePass(VkFramebuffer* frameBuffer = NULL);
+	FrameInfo beginCompute();
 	void submitFramePass();
 	void submitCompute();
 
@@ -93,11 +96,7 @@ public:
 		VkShaderStageFlags stageFlags;	// Bitmask specifying which stages the descriptor can be accessed in
 	};
 
-	/* Generates a vector of descriptor set layout bindings described by an array of DescriptorInfos
-	descriptors		<<	Vector specifying the members of the descriptor set.
-	return			>>	The resulting descriptor set layout bindings.
-	*/
-	std::vector<VkDescriptorSetLayoutBinding> generateDescriptorSetLayoutBinding(std::vector<DescriptorInfo> descriptors);
+	
 
 	VkDescriptorSet generateDescriptor(VkDescriptorType type, VkDescriptorSetLayout *layout);
 	VkDescriptorSet generateDescriptor(VkDescriptorType type, uint32_t set_binding);
@@ -111,20 +110,15 @@ public:
 	/* Acquire the RenderPass for the final frame buffers presented to the screen.
 	*/
 	VkRenderPass getFramePass();
-	VkCommandBuffer getFrameCmdBuf();
-	VkCommandBuffer getComputeBuf();
+	VkPipelineLayout getFramePassLayout();
 	int getQueueFamily(QueueType queue) { return queues[queue].family; };
 	uint32_t getFrameIndex() { return frameCycle; }
 	uint32_t getTransferIndex() { return !frameCycle; }
-	/* Get the index of the current swap chain.
-	*/
-	uint32_t getSwapChainIndex() { return swapChainImgIndex; }
 	size_t getSwapChainLength() { return swapchainImages.size(); }
 
 	VkSurfaceFormatKHR getSwapchainFormat();
 	VkImageView getSwapChainView(uint32_t index);
 	VkImage getSwapChainImg(uint32_t index);
-	VkPipelineLayout getRenderPassLayout();
 
 	unsigned int getWidth();
 	unsigned int getHeight();
@@ -169,8 +163,8 @@ private:
 	VkViewport viewport;
 
 	VkSemaphore imageAvailable;
-	VkSemaphore renderFinished, computeFinished;
-	VkCommandBuffer _frameCmdBuf, _computeCmdBuf;
+	VkSemaphore renderFinished[2], computeFinished;		// Multiple render signals as it could be useful to overlap frame buffers.
+	VkCommandBuffer _frameCmdBuf[2], _computeCmdBuf;
 	VkCommandBuffer _transferCmd[2];
 	VkFence			_transferFences[2];
 	uint32_t swapChainImgIndex;								// Tracks frame buffer index for current frame
