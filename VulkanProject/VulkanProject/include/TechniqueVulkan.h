@@ -14,6 +14,7 @@ public:
 	TechniqueVulkan(VulkanRenderer* renderer, ShaderVulkan* sHandle, VkPipelineLayout layout);
 	/* Generate a graphics pipeline technique
 	*/
+	TechniqueVulkan(VulkanRenderer* renderer, ShaderVulkan* sHandle, VkRenderPass renderPass, VkPipelineVertexInputStateCreateInfo &vertexInputState, uint32_t subpassIndex);
 	TechniqueVulkan(VulkanRenderer* renderer, ShaderVulkan* sHandle, VkRenderPass renderPass, VkPipelineVertexInputStateCreateInfo &vertexInputState);
 	virtual ~TechniqueVulkan();
 	virtual void bind(VkCommandBuffer cmdBuf, VkPipelineBindPoint bindPoint);
@@ -21,7 +22,7 @@ public:
 	VkPipeline pipeline;
 
 private:
-	void createGraphicsPipeline(VkPipelineVertexInputStateCreateInfo &vertexInputState);
+	void createGraphicsPipeline(VkPipelineVertexInputStateCreateInfo &vertexInputState, uint32_t subpassIndex);
 	void createComputePipeline(VkPipelineLayout layout);
 
 	VulkanRenderer *_renderHandle;

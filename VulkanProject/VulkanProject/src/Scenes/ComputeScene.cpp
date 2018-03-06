@@ -155,7 +155,7 @@ void ComputeScene::defineDescriptorLayout(VkDevice device, std::vector<VkDescrip
 }
 
 
-VkRenderPass ComputeScene::defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat)
+VkRenderPass ComputeScene::defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat, std::vector<VkImageView>& additionalAttatchments)
 {
 	const int num_attach = 2;
 	VkAttachmentDescription attach[num_attach] = {

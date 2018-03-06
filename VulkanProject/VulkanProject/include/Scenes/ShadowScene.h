@@ -21,7 +21,7 @@ public:
 	virtual void initialize(VulkanRenderer* handle);
 
 	virtual void defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout);
-	virtual VkRenderPass defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat);
+	virtual VkRenderPass defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat, std::vector<VkImageView>& additionalAttatchments);
 
 private:
 	void createBuffers();
@@ -32,7 +32,7 @@ private:
 	const uint32_t transformMatrixBindingSlot = 1;
 	const uint32_t clipToShadowMapMatrixBindingSlot = 2;
 
-	const uint32_t shadowMapSize = 512;
+	const uint32_t shadowMapSize = 1024;
 
 	glm::mat4 shadowMappingMatrix;			// Contains all transformations done in the shadow mapping pass
 	ConstantBufferVulkan* shadowMappingMatrixBuffer;
@@ -67,6 +67,3 @@ private:
 
 	vk::LayoutConstruct pipelineLayoutConstruct;
 };
-
-// todo:
-// write shaders

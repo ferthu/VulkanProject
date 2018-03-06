@@ -1,10 +1,12 @@
 #define VK_USE_PLATFORM_WIN32_KHR	// required for windows-specific vulkan structs and functions
 #include "vulkan\vulkan.h"
 #include "glm\glm.hpp"
+#include "glm\gtc\matrix_transform.hpp"
 #include "VulkanRenderer.h"
 #include "Scenes/TriangleScene.h"
 #include "Scenes/ComputeScene.h"
 #include "Scenes/ComputeExperiment.h"
+#include "Scenes/ShadowScene.h"
 #undef main
 
 void updateWinTitle(VulkanRenderer *rend);
@@ -13,8 +15,9 @@ void updateWinTitle(VulkanRenderer *rend);
 int main(int argc, const char* argv)
 {
 	VulkanRenderer renderer;
-	renderer.initialize( new ComputeExperiment(), 1024, 1024);
+	//renderer.initialize( new ComputeExperiment(), 1024, 1024);
 	//renderer.initialize(new ComputeScene(), 512, 512);
+	renderer.initialize(new ShadowScene(glm::mat4(1.0f), glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -2.0f))), 800, 600);
 
 	SDL_Event windowEvent;
 	while (true)

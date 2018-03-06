@@ -48,12 +48,15 @@ public:
 	~ShaderVulkan();
 	void setShader(const std::string& shaderFileName, ShaderType type);
 
+	bool hasFragmentShader();
 
 	int compileMaterial(std::string& errString);
 
 	VkShaderModule vertexShader, fragmentShader, compShader;
 	
 private:
+	bool fragmentShaderEnabled = false;
+
 	std::string name;
 	VulkanRenderer* _renderHandle;	// Pointer to the renderer that created this material
 

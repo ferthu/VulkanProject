@@ -86,7 +86,7 @@ void TriangleScene::defineDescriptorLayout(VkDevice device, std::vector<VkDescri
 }
 
 
-VkRenderPass TriangleScene::defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat)
+VkRenderPass TriangleScene::defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat, std::vector<VkImageView>& additionalAttatchments)
 {
 	return createRenderPass_SingleColorDepth(device, swapchainFormat, depthFormat);
 }

@@ -266,18 +266,22 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	createDepthComponents();
 
 	// Create render pass
-	frameBufferPass = scene->defineRenderPass(device, swapchainCreateInfo.imageFormat, depthFormat);
+	scene->_renderHandle = this;	// Required for creation of shadow map
+	std::vector<VkImageView> additionalAttatchments;
+	frameBufferPass = scene->defineRenderPass(device, swapchainCreateInfo.imageFormat, depthFormat, additionalAttatchments);
 	
 	// Create frame buffers.
-	const uint32_t NUM_FRAME_ATTACH = 2;
+	const uint32_t NUM_FRAME_ATTACH = 2 + additionalAttatchments.size();
 	swapChainFramebuffers.resize(swapchainImages.size());
 	for (size_t i = 0; i < swapChainFramebuffers.size(); i++)
 	{
-		VkImageView attachments[NUM_FRAME_ATTACH] = {
-			swapchainImageViews[i],
-			depthImageView
-		};
-		swapChainFramebuffers[i] = createFramebuffer(device, frameBufferPass, swapchainExtent, attachments, NUM_FRAME_ATTACH);
+		std::vector<VkImageView> attachments;
+		attachments.push_back(swapchainImageViews[i]);
+		attachments.push_back(depthImageView);
+		for (auto att : additionalAttatchments)
+			attachments.push_back(att);
+
+		swapChainFramebuffers[i] = createFramebuffer(device, frameBufferPass, swapchainExtent, &attachments[0], NUM_FRAME_ATTACH);
 	}
 
 
@@ -615,8 +619,6 @@ VkDescriptorSet VulkanRenderer::generateDescriptor(VkDescriptorType type, VkDesc
 {
 	return createDescriptorSet(device, descriptorPools[type], layout);
 }
-
-
 
 void VulkanRenderer::transferBufferData(VkBuffer buffer, const void* data, size_t size, size_t offset)
 {

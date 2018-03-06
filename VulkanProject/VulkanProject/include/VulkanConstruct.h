@@ -1597,7 +1597,7 @@ std::vector<VkDescriptorSetLayoutBinding> generateDescriptorSetLayoutBinding(std
 
 	std::vector<VkDescriptorSetLayoutBinding> bindings;
 
-	for (int i = 0; i < descriptors.size(); +i)
+	for (int i = 0; i < descriptors.size(); ++i)
 	{
 		VkDescriptorSetLayoutBinding binding = {};
 		binding.binding = descriptors[i].bindingSlot;

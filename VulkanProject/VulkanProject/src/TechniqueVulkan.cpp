@@ -12,10 +12,15 @@ TechniqueVulkan::TechniqueVulkan(VulkanRenderer* renderer, ShaderVulkan* sHandle
 {
 	createComputePipeline(layout);
 }
-TechniqueVulkan::TechniqueVulkan( VulkanRenderer* renderer, ShaderVulkan* sHandle, VkRenderPass renderPass, VkPipelineVertexInputStateCreateInfo &vertexInputState)
+TechniqueVulkan::TechniqueVulkan( VulkanRenderer* renderer, ShaderVulkan* sHandle, VkRenderPass renderPass, VkPipelineVertexInputStateCreateInfo &vertexInputState, uint32_t subpassIndex)
 	: _sHandle(sHandle), _renderHandle(renderer), _passHandle(renderPass)
 {
-	createGraphicsPipeline(vertexInputState);
+	createGraphicsPipeline(vertexInputState, subpassIndex);
+}
+
+TechniqueVulkan::TechniqueVulkan(VulkanRenderer * renderer, ShaderVulkan * sHandle, VkRenderPass renderPass, VkPipelineVertexInputStateCreateInfo & vertexInputState)
+{
+	TechniqueVulkan(renderer, sHandle, renderPass, vertexInputState, 0);
 }
 
 TechniqueVulkan::~TechniqueVulkan()
@@ -28,7 +33,7 @@ void TechniqueVulkan::bind(VkCommandBuffer cmdBuf, VkPipelineBindPoint bindPoint
 	vkCmdBindPipeline(cmdBuf, bindPoint, pipeline);
 }
 
-void TechniqueVulkan::createGraphicsPipeline(VkPipelineVertexInputStateCreateInfo &vertexInputState)
+void TechniqueVulkan::createGraphicsPipeline(VkPipelineVertexInputStateCreateInfo &vertexInputState, uint32_t subpassIndex)
 {
 	assert(_sHandle);
 	VkPipelineShaderStageCreateInfo stages[2];
@@ -62,7 +67,7 @@ void TechniqueVulkan::createGraphicsPipeline(VkPipelineVertexInputStateCreateInf
 	pipelineColorBlendAttachmentState.blendEnable = VK_FALSE;
 
 	VkPipelineColorBlendStateCreateInfo pipelineColorBlendStateCreateInfo =
-		defineBlendState(&pipelineColorBlendAttachmentState, 1);
+		defineBlendState(&pipelineColorBlendAttachmentState, _sHandle->hasFragmentShader() ? 1 : 0);
 
 	VkPipelineDepthStencilStateCreateInfo depthStencil =
 		defineDepthState();
@@ -71,7 +76,7 @@ void TechniqueVulkan::createGraphicsPipeline(VkPipelineVertexInputStateCreateInf
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipelineInfo.pNext = nullptr;
 	pipelineInfo.flags = 0;
-	pipelineInfo.stageCount = 2;
+	pipelineInfo.stageCount = _sHandle->hasFragmentShader() ? 2 : 1;
 	pipelineInfo.pStages = stages;
 	pipelineInfo.pVertexInputState = &vertexInputState;
 	pipelineInfo.pInputAssemblyState = &pipelineInputAssemblyStateCreateInfo;
@@ -84,7 +89,7 @@ void TechniqueVulkan::createGraphicsPipeline(VkPipelineVertexInputStateCreateInf
 	pipelineInfo.pDynamicState = nullptr;
 	pipelineInfo.layout = _renderHandle->getRenderPassLayout();
 	pipelineInfo.renderPass = _passHandle;
-	pipelineInfo.subpass = 0;
+	pipelineInfo.subpass = subpassIndex;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 	pipelineInfo.basePipelineIndex = 0;
 

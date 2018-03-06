@@ -13,7 +13,7 @@ public:
 	VulkanRenderer * _renderHandle;
 
 	virtual void defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout) = 0;
-	virtual VkRenderPass defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat) = 0;
+	virtual VkRenderPass defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat, std::vector<VkImageView>& additionalAttatchments) = 0;
 
 	virtual void initialize(VulkanRenderer *handle) { _renderHandle = handle; };
 	virtual void frame(VkCommandBuffer cmdBuf) = 0;

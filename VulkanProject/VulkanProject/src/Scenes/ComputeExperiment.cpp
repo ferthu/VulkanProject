@@ -178,7 +178,7 @@ void ComputeExperiment::defineDescriptorLayout(VkDevice device, std::vector<VkDe
 }
 
 
-VkRenderPass ComputeExperiment::defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat)
+VkRenderPass ComputeExperiment::defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat, std::vector<VkImageView>& additionalAttatchments)
 {
 	const int num_attach = 2;
 	VkAttachmentDescription attach[num_attach] = {

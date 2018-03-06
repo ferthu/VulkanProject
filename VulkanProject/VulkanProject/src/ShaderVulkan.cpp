@@ -31,7 +31,17 @@ void ShaderVulkan::destroyShaderObjects()
 
 void ShaderVulkan::setShader(const std::string & shaderFileName, ShaderType type)
 {
+	if (type == ShaderType::PS && shaderFileName != "")
+		fragmentShaderEnabled = true;
+	else if (type == ShaderType::PS)
+		fragmentShaderEnabled = false;
+
 	shaderFileNames[type] = shaderFileName;
+}
+
+bool ShaderVulkan::hasFragmentShader()
+{
+	return fragmentShaderEnabled;
 }
 
 int ShaderVulkan::compileMaterial(std::string & errString)
@@ -86,14 +96,16 @@ int ShaderVulkan::createPipeShader()
 		vsData = loadSPIR_V(spvFile);
 	}
 
-	// 
-	if (ends_with(shaderFileNames[ShaderVulkan::ShaderType::PS], ".spv"))
-		fsData = loadSPIR_V(shaderFileNames[ShaderVulkan::ShaderType::PS]);
-	else
+	if (fragmentShaderEnabled)
 	{
-		std::string tmpFile = assembleShader(ShaderVulkan::ShaderType::PS);
-		std::string spvFile = runCompiler(ShaderVulkan::ShaderType::PS, tmpFile);
-		fsData = loadSPIR_V(spvFile);
+		if (ends_with(shaderFileNames[ShaderVulkan::ShaderType::PS], ".spv"))
+			fsData = loadSPIR_V(shaderFileNames[ShaderVulkan::ShaderType::PS]);
+		else
+		{
+			std::string tmpFile = assembleShader(ShaderVulkan::ShaderType::PS);
+			std::string spvFile = runCompiler(ShaderVulkan::ShaderType::PS, tmpFile);
+			fsData = loadSPIR_V(spvFile);
+		}
 	}
 
 	VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
@@ -109,14 +121,18 @@ int ShaderVulkan::createPipeShader()
 		std::cout << "Failed to create vertex shader module.\n";
 		return -1;
 	}
-	shaderModuleCreateInfo.codeSize = fsData.size();
-	shaderModuleCreateInfo.pCode = reinterpret_cast<uint32_t*>(fsData.data());
 
-	result = vkCreateShaderModule(_renderHandle->getDevice(), &shaderModuleCreateInfo, nullptr, &fragmentShader);
-	if (result != VK_SUCCESS)
+	if (fragmentShaderEnabled)
 	{
-		std::cout << "Failed to create fragment shader module.\n";
-		return -2;
+		shaderModuleCreateInfo.codeSize = fsData.size();
+		shaderModuleCreateInfo.pCode = reinterpret_cast<uint32_t*>(fsData.data());
+
+		result = vkCreateShaderModule(_renderHandle->getDevice(), &shaderModuleCreateInfo, nullptr, &fragmentShader);
+		if (result != VK_SUCCESS)
+		{
+			std::cout << "Failed to create fragment shader module.\n";
+			return -2;
+		}
 	}
 	return 0;
 }
