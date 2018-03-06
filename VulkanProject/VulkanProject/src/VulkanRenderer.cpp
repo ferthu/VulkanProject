@@ -140,6 +140,7 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	queues.push_queue(physicalDevice, 1.f, prefMemQueue, (uint32_t)std::size(prefMemQueue));
 	queues.push_queue(physicalDevice, 1.f, prefGraphQueue, (uint32_t)std::size(prefGraphQueue));
 	queues.push_queue(physicalDevice, 1.f, prefComputeQueue, (uint32_t)std::size(prefComputeQueue));
+	queues.push_queue(physicalDevice, 1.f, prefComputeQueue, (uint32_t)std::size(prefComputeQueue));
 
 	// Info on queues
 	VkDeviceQueueCreateInfo queueInfo[QueueType::COUNT] = {};

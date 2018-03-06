@@ -52,7 +52,8 @@ enum QueueType {
 	MEM = 0,
 	GRAPHIC = 1,
 	COMPUTE = 2,
-	COUNT = 3
+	COMPUTE3 = 3,
+	COUNT = 4
 };
 // Set constant values for now
 
