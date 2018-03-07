@@ -141,16 +141,7 @@ const char *path_tmp = "tmp\\";
 // Returns relative file path of created file
 std::string ShaderVulkan::assembleShader(ShaderVulkan::ShaderType type)
 {
-	std::string fileName;
-
-	if (type == ShaderVulkan::ShaderType::VS)
-		fileName = "VertexShader.vert";
-	else if (type == ShaderVulkan::ShaderType::PS)
-		fileName = "FragmentShader.frag";
-	else if (type == ShaderVulkan::ShaderType::CS)
-		fileName = "ComputeShader.comp";
-	else
-		throw std::runtime_error("Unsupported shader type!");
+	std::string fileName = findStringEnd(shaderFileNames[type], "/");
 
 	// Read shader into string
 	std::ifstream file(shaderFileNames[type]);
@@ -212,24 +203,23 @@ void printThreadError(const char *msg)
 std::string ShaderVulkan::runCompiler(ShaderVulkan::ShaderType type, std::string inputFileName)
 {
 	// pass defines
-	std::string commandLineStr, fileName = path_tmp;
+	std::string commandLineStr, outputFile = path_tmp;
+	outputFile += findStringBegin(inputFileName, ".") + ".spv";
 	if (type == ShaderVulkan::ShaderType::VS)
 	{
-		fileName += "VertexShader.spv";
-		char c = '"';
-		commandLineStr.append(" -S vert -V -o \"" + fileName + "\" -e main ");
+		commandLineStr.append(" -S vert -V -o \"");
 	}
 	else if (type == ShaderVulkan::ShaderType::PS)
 	{
-		fileName += "FragmentShader.spv";
-		commandLineStr.append(" -S frag -V -o \"" + fileName + "\" -e main ");
+		commandLineStr.append(" -S frag -V -o \"");
 	}
 	else if (type == ShaderVulkan::ShaderType::CS)
 	{
-		fileName += "ComputeShader.spv";
-		commandLineStr.append(" -S comp -V -o \"" + fileName + "\" -e main ");
+		commandLineStr.append(" -S comp -V -o \"");
 	}
-
+	// Output
+	commandLineStr.append(outputFile + "\" -e main ");
+	
 	commandLineStr += "\"";
 	commandLineStr.append(path_tmp);
 	commandLineStr += inputFileName + "\"";
@@ -300,8 +290,7 @@ std::string ShaderVulkan::runCompiler(ShaderVulkan::ShaderType type, std::string
 	CloseHandle(processInfo.hProcess);
 	CloseHandle(processInfo.hThread);
 
-	fileName = path_exe + fileName;
-	return fileName;
+	return path_exe +  outputFile;
 }
 
 std::vector<char> ShaderVulkan::loadSPIR_V(std::string fileName)

@@ -297,6 +297,10 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	computeFinished[1] = createSemaphore(device);
 	_transferFences[0] = createFence(device, true);
 	_transferFences[1] = createFence(device, false);
+	computeFence[0] = createFence(device, true);
+	computeFence[1] = createFence(device, true);
+	renderFence[0] = createFence(device, true);
+	renderFence[1] = createFence(device, true);
 
 
 	for (uint32_t i = 0; i < MAX_DESCRIPTOR_POOLS; i++)
@@ -365,6 +369,10 @@ int VulkanRenderer::shutdown()
 	vkDestroySemaphore(device, imageAvailable, nullptr);
 	vkDestroyFence(device, _transferFences[0], nullptr);
 	vkDestroyFence(device, _transferFences[1], nullptr);
+	vkDestroyFence(device, computeFence[0], nullptr);
+	vkDestroyFence(device, computeFence[1], nullptr);
+	vkDestroyFence(device, renderFence[0], nullptr);
+	vkDestroyFence(device, renderFence[1], nullptr);
 	vkDestroyBuffer(device, stagingBuffer, nullptr);
 
 	// Destroy frame buffer
@@ -441,6 +449,7 @@ void VulkanRenderer::nextFrame()
 VulkanRenderer::FrameInfo VulkanRenderer::beginFramePass(VkFramebuffer* frameBuffer)
 {
 	VkCommandBuffer cmdBuf = _frameCmdBuf[getFrameIndex()];
+	waitFence(device, renderFence[getFrameIndex()]);
 	VkResult err = vkResetCommandBuffer(cmdBuf, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 	if (err)
 		std::cout << "Command buff reset err\n";
@@ -476,6 +485,7 @@ void VulkanRenderer::submitFramePass()
 {
 
 	VkCommandBuffer cmdBuf = _frameCmdBuf[getFrameIndex()];
+
 	vkCmdEndRenderPass(cmdBuf);
 	if (vkEndCommandBuffer(cmdBuf) != VK_SUCCESS) {
 		throw std::runtime_error("failed to record command buffer!");
@@ -495,7 +505,7 @@ void VulkanRenderer::submitFramePass()
 	submitInfo.pCommandBuffers = &cmdBuf;
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
-	VkResult err = vkQueueSubmit(queues[QueueType::GRAPHIC].queue, 1, &submitInfo, VK_NULL_HANDLE);
+	VkResult err = vkQueueSubmit(queues[QueueType::GRAPHIC].queue, 1, &submitInfo, renderFence[getFrameIndex()]);
 	if (err != VK_SUCCESS) {
 		throw std::runtime_error("Failed to submit draw command buffer!");
 	}
@@ -506,7 +516,7 @@ void VulkanRenderer::submitFramePass()
 VulkanRenderer::FrameInfo VulkanRenderer::beginCompute(uint32_t computeQueueIndex)
 {
 	VkCommandBuffer compBuf = _computeCmdBuf[computeQueueIndex];
-	vkQueueWaitIdle(queues[QueueType::COMPUTE].queue);
+	waitFence(device, computeFence[computeQueueIndex]);
 	VkResult err = vkResetCommandBuffer(compBuf, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 	if (err)
 		std::cout << "Command buff reset err\n";
@@ -548,7 +558,7 @@ void VulkanRenderer::submitCompute(uint32_t computeQueueIndex, bool syncPrevious
 	submitInfo.pCommandBuffers = &compBuf;
 	submitInfo.signalSemaphoreCount = (uint32_t)std::size(signalSemaphores);
 	submitInfo.pSignalSemaphores = signalSemaphores;
-	VkResult err = vkQueueSubmit(queues[QueueType::COMPUTE].queue, 1, &submitInfo, VK_NULL_HANDLE);
+	VkResult err = vkQueueSubmit(queues[QueueType::COMPUTE].queue, 1, &submitInfo, computeFence[computeQueueIndex]);
 	if (err != VK_SUCCESS) {
 		throw std::runtime_error("Failed to submit draw command buffer!");
 	}

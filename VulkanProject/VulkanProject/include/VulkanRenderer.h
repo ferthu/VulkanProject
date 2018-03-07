@@ -63,7 +63,7 @@ public:
 
 	VulkanRenderer();
 	~VulkanRenderer();
-	
+
 	void setWinTitle(const char* title);
 
 	int initialize(Scene *scene, unsigned int width, unsigned int height, uint32_t BIT_FLAGS);
@@ -121,10 +121,10 @@ public:
 
 	unsigned int getWidth();
 	unsigned int getHeight();
-	
+
 
 private:
-	Scene* scene;
+	Scene * scene;
 
 	VkInstance instance;
 	VkDevice device;
@@ -149,7 +149,7 @@ private:
 	glm::vec4 clearColor;								// Frame buffer clear color.
 
 	/* Render pass & Pipelines
-	Dependent constructs. 
+	Dependent constructs.
 	Render pass determines attached framebuffers ...
 	Pipelines depend on a render pass and when set determine renderstate, shaders, culling...
 	Pipeline layouts however can be shared between any combination of setups aslong there are no conflicts in the bindings
@@ -161,8 +161,9 @@ private:
 
 	VkViewport viewport;
 
-	VkSemaphore imageAvailable; 
+	VkSemaphore imageAvailable;
 	VkSemaphore renderFinished[2], computeFinished[2];		// Multiple render signals as it could be useful to overlap frame buffers.
+	VkFence renderFence[2], computeFence[2];
 	uint32_t waitQueueLen;
 	VkSemaphore waitQueue[QueueType::COUNT];
 

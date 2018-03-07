@@ -2,6 +2,7 @@
 #include "VulkanRenderer.h"
 #include "Stuff/RandomGenerator.h"
 #include "VulkanConstruct.h"
+#include <iostream>
 
 ComputeExperiment::ComputeExperiment(Mode mode, uint32_t num_particles)
 	: mode(mode), NUM_PARTICLE(num_particles)
@@ -21,9 +22,12 @@ ComputeExperiment::~ComputeExperiment()
 	smallOpLayout.destroy(_renderHandle->getDevice());
 	postLayout.destroy(_renderHandle->getDevice());
 }
+#define COMPILE
 
 void ComputeExperiment::initialize(VulkanRenderer *handle)
 {
+	std::cout << "Initiating Compute Experiment\n";
+	std::cout << "Mode: " << mode << "\n";
 	Scene::initialize(handle);
 
 	// Render pass initiation
@@ -65,8 +69,8 @@ void ComputeExperiment::initialize(VulkanRenderer *handle)
 	compShader->setShader("resource/Compute/ComputeRegLimited.glsl", ShaderVulkan::ShaderType::CS);
 	compSmallOp->setShader("resource/Compute/ComputeSimple.glsl", ShaderVulkan::ShaderType::CS);
 #else
-	compShader->setShader("resource/Compute/ComputeRegLimited.spv", ShaderVulkan::ShaderType::CS);
-	compSmallOp->setShader("resource/Compute/ComputeSimple.spv", ShaderVulkan::ShaderType::CS);
+	compShader->setShader("resource/tmp/ComputeRegLimited.spv", ShaderVulkan::ShaderType::CS);
+	compSmallOp->setShader("resource/tmp/ComputeSimple.spv", ShaderVulkan::ShaderType::CS);
 #endif
 	compShader->compileMaterial(err);
 	compSmallOp->compileMaterial(err);
@@ -164,7 +168,13 @@ void ComputeExperiment::frame()
 	uint32_t dimY = _renderHandle->getHeight() / 16;
 	vkCmdDispatch(info._buf, dimX, dimY, 1);
 
-	if (mode == Mode::SEQUENTIAL)
+	if (mode == Mode::MULTI_QUEUE)
+	{
+		transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
+		_renderHandle->submitCompute(0, true);
+		info = _renderHandle->beginCompute(1);
+	}
+	else if (mode == Mode::SEQUENTIAL)
 		serializeCommandBuffer(info._buf);
 	
 	// Dispatch compute operation
@@ -174,9 +184,15 @@ void ComputeExperiment::frame()
 	vkCmdDispatch(info._buf, dimX, 1, 1);
 
 	//Transition frame buf back
-	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
-	_renderHandle->submitCompute();
-
+	if (mode == Mode::MULTI_QUEUE)
+	{
+		_renderHandle->submitCompute(1, false);
+	}
+	else
+	{
+		transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
+		_renderHandle->submitCompute(0, true);
+	}
 
 	
 	_renderHandle->present();
