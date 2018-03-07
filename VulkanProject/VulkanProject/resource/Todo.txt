@@ -8,10 +8,11 @@ Todo:
 Build versions of compute experiment.
 	- Memory dependent RegLimited task (use image reads somehow)
 	x Sequential execution
+	x Multiple queues
 Gaussian blur compute pass
 Allow compute pass to overlap frame
-Async. compute settings
-
+	x Implement
+	- Test it using experiment 2
 Issues:
 
 Commented //defineFramebufShadowMap(shadowMapFormat)
