@@ -19,7 +19,8 @@ public:
 		REG_LIMITED,
 		MEM_CONSUMPTION,
 		SEQUENTIAL,
-		MULTI_QUEUE
+		MULTI_QUEUE,
+		MULTI_DISPATCH
 	};
 	
 	ComputeExperiment(Mode mode = REG_LIMITED, uint32_t num_particles = 1024 * 512);

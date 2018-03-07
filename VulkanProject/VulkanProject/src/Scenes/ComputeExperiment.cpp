@@ -166,7 +166,16 @@ void ComputeExperiment::frame()
 	// Dispatch
 	uint32_t dimX = _renderHandle->getWidth() / 16;
 	uint32_t dimY = _renderHandle->getHeight() / 16;
-	vkCmdDispatch(info._buf, dimX, dimY, 1);
+	if (mode == Mode::MULTI_DISPATCH)
+	{
+		for (int y = 0; y < _renderHandle->getHeight() / (16 * 8); y++)
+		{
+			for (int x = 0; x < _renderHandle->getWidth() / (16 * 8); x++)
+				vkCmdDispatch(info._buf, 8, 8, 1);
+		}
+	}
+	else
+		vkCmdDispatch(info._buf, dimX, dimY, 1);
 
 	if (mode == Mode::MULTI_QUEUE)
 	{
@@ -180,8 +189,14 @@ void ComputeExperiment::frame()
 	// Dispatch compute operation
 	techniqueSmallOp->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	smallOpBuf->bind(info._buf, smallOpLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
-	dimX = NUM_PARTICLE / 256;
-	vkCmdDispatch(info._buf, dimX, 1, 1);
+
+	if (mode == Mode::MULTI_DISPATCH)
+	{
+		for (int i = 0; i < NUM_PARTICLE / (256 * 64); i++)
+			vkCmdDispatch(info._buf, 64, 1, 1);
+	}
+	else
+		vkCmdDispatch(info._buf, NUM_PARTICLE / 256, 1, 1);
 
 	//Transition frame buf back
 	if (mode == Mode::MULTI_QUEUE)
