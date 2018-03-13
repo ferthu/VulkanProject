@@ -78,6 +78,11 @@ public:
 	};
 	// Begins a frame pass with a supplied custom frame buffer
 	FrameInfo beginFramePass(VkFramebuffer* frameBuffer = NULL);
+
+	// These two functions are used instead of beginFramePass when their functionality needs to be separated
+	FrameInfo beginCommandBuffer();
+	void beginRenderPass(VkCommandBuffer cmdBuf, VkFramebuffer* frameBuffer = NULL);
+
 	FrameInfo beginCompute(uint32_t computeQueueIndex = 0);
 	void submitFramePass();
 	void submitCompute(uint32_t computeQueueIndex = 0, bool syncPrevious = true);

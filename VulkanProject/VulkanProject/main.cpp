@@ -19,7 +19,17 @@ int main(int argc, const char* argv)
 	//renderer.initialize( new ComputeExperiment(ComputeExperiment::Mode::MULTI_DISPATCH), 256, 256, TRIPLE_BUFFERED);
 	//renderer.initialize(new ComputeScene(), 512, 512, TRIPLE_BUFFERED);
 	//renderer.initialize(new TriangleScene(), 512, 512, 0);
-	renderer.initialize(new ShadowScene(glm::mat4(1.0f), glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -2.0f))), 800, 600, 0);
+	//glm::perspective(80.0f, 800.0f / 600.0f, 0.1f, 10.0f);
+	glm::mat4 cameraMatrix = glm::mat4(1.0f);
+	cameraMatrix = glm::translate(cameraMatrix, glm::vec3(0.0f, 0.0f, -2.0f));
+	cameraMatrix = glm::rotate(cameraMatrix, glm::pi<float>() * 0.0f, glm::vec3(0, 1, 0));
+	cameraMatrix = glm::perspective(2.0f, 600.0f / 800.0f, 0.1f, 20.0f) * cameraMatrix;
+
+	glm::mat4 lightMatrix = glm::mat4(1.0f);
+	lightMatrix = glm::translate(lightMatrix, glm::vec3(0.0f, 0.0f, -2.0f));
+	lightMatrix = glm::rotate(lightMatrix, glm::pi<float>() * 0.0f, glm::vec3(0, 1, 0));
+	lightMatrix = glm::orthoLH(-5.0f, 5.0f, -5.0f, 5.0f, 0.1f, 10.0f) * lightMatrix;
+	renderer.initialize(new ShadowScene(cameraMatrix, lightMatrix), 800, 600, 0);
 
 	SDL_Event windowEvent;
 	while (true)

@@ -22,6 +22,7 @@ public:
 
 	virtual void defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout);
 	virtual VkRenderPass defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat, std::vector<VkImageView>& additionalAttatchments);
+	void defineShadowRenderPass(VkDevice device);
 
 private:
 	void createBuffers();
@@ -68,4 +69,7 @@ private:
 	vk::LayoutConstruct pipelineLayoutConstruct;
 
 	VkDescriptorPool desciptorPool;
+
+	VkRenderPass shadowRenderPass;
+	VkFramebuffer shadowFramebuffer;
 };

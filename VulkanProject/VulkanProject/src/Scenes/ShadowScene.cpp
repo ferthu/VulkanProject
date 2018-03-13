@@ -2,6 +2,8 @@
 #include "VulkanRenderer.h"
 #include "Stuff/RandomGenerator.h"
 #include "VertexBufferVulkan.h"
+
+#include "glm\gtc\matrix_transform.hpp"
 /*
 transformMatrix	<< The matrix that transforms geometry into the camera's clip space.
 lightMatrix		<< The matrix that transforms geometry into the light's clip space.
@@ -10,7 +12,7 @@ ShadowScene::ShadowScene(glm::mat4 transformMatrix, glm::mat4 lightMatrix)
 {
 	this->transformMatrix = transformMatrix;
 	shadowMappingMatrix = lightMatrix;
-	clipSpaceToShadowMapMatrix = glm::inverse(transformMatrix) * lightMatrix;
+	clipSpaceToShadowMapMatrix = lightMatrix * glm::inverse(transformMatrix);
 }
 
 ShadowScene::~ShadowScene()
@@ -41,7 +43,8 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	glm::vec3 vertexNormals[TRIANGLE_COUNT * 3];
 
 	mf::RandomGenerator randomGenerator;
-	randomGenerator.seedGenerator();
+	//randomGenerator.seedGenerator();
+	randomGenerator.setSeed({ 2 });
 	mf::distributeTriangles(randomGenerator, 2.0f, TRIANGLE_COUNT, glm::vec2(0.2f, 0.3f), vertexPositions, vertexNormals);
 
 	// Create vertex buffer
@@ -80,8 +83,8 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	VkPipelineVertexInputStateCreateInfo vertexBindings =
 		defineVertexBufferBindings(vertexBufferBindings, BUFFER_COUNT, vertexAttributes, ATTRIBUTE_COUNT);
 
-	depthPassTechnique = new TechniqueVulkan(_renderHandle, depthPassShaders, _renderHandle->getFramePass(), _renderHandle->getFramePassLayout(), vertexBindings, 0);
-	renderPassTechnique = new TechniqueVulkan(_renderHandle, renderPassShaders, _renderHandle->getFramePass(), _renderHandle->getFramePassLayout(), vertexBindings, 1);
+	depthPassTechnique = new TechniqueVulkan(_renderHandle, depthPassShaders, shadowRenderPass, _renderHandle->getFramePassLayout(), vertexBindings, 0);
+	renderPassTechnique = new TechniqueVulkan(_renderHandle, renderPassShaders, _renderHandle->getFramePass(), _renderHandle->getFramePassLayout(), vertexBindings, 0);
 
 	// Define viewport
 	shadowMapViewport.x = 0;
@@ -208,18 +211,32 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 
 void ShadowScene::frame()
 {
-	VulkanRenderer::FrameInfo info = _renderHandle->beginFramePass();
+	VulkanRenderer::FrameInfo info = _renderHandle->beginCommandBuffer();
 
 	// Shadow map pass
+	VkRenderPassBeginInfo renderPassInfo = {};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderPassInfo.renderPass = shadowRenderPass;
+	renderPassInfo.framebuffer = shadowFramebuffer;
+	renderPassInfo.renderArea.offset = { 0, 0 };
+	renderPassInfo.renderArea.extent.height = shadowMapSize;
+	renderPassInfo.renderArea.extent.width = shadowMapSize;
+	// Clear params
+	VkClearValue clearValue;
+	clearValue.depthStencil = { 1.0f, 0 };
+	renderPassInfo.clearValueCount = 1;
+	renderPassInfo.pClearValues = &clearValue;
+
+	vkCmdBeginRenderPass(info._buf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
 	vkCmdBindPipeline(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, depthPassTechnique->pipeline);
-
 	vkCmdSetViewport(info._buf, 0, 1, &shadowMapViewport);
-
 	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayoutConstruct._layout, 0, 1, &shadowPassDescriptorSet, 0, nullptr);
 
 	positionBufferBinding.bind(info._buf, 0);
 	normalBufferBinding.bind(info._buf, 1);
 	vkCmdDraw(info._buf, positionBufferBinding.numElements, 1, 0, 0);
+	vkCmdEndRenderPass(info._buf);
 
 	// Image barrier transferring image layout
 	VkImageMemoryBarrier imageBarrier = {};
@@ -242,17 +259,16 @@ void ShadowScene::frame()
 		0, nullptr, 0, nullptr, 1, &imageBarrier);
 	
 	// Rendering pass
-	vkCmdNextSubpass(info._buf, VK_SUBPASS_CONTENTS_INLINE);
+	_renderHandle->beginRenderPass(info._buf);
 	vkCmdBindPipeline(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, renderPassTechnique->pipeline);
-
 	VkViewport normalViewport = _renderHandle->getViewport();
 	vkCmdSetViewport(info._buf, 0, 1, &normalViewport);
-
 	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayoutConstruct._layout, 1, 1, &renderPassDescriptorSet, 0, nullptr);
 
 	vkCmdDraw(info._buf, positionBufferBinding.numElements, 1, 0, 0);
 
 	_renderHandle->submitFramePass();
+	_renderHandle->present();
 }
 
 
@@ -291,15 +307,17 @@ VkRenderPass ShadowScene::defineRenderPass(VkDevice device, VkFormat swapchainFo
 	shadowMap = new Texture2DVulkan(_renderHandle, shadowMapSampler);
 	shadowMap->createShadowMap(shadowMapSize, shadowMapSize, shadowMapFormat);
 
+	// Define shadow render pass
+	defineShadowRenderPass(device);
+
 	// Define the render pass
 	VkRenderPass renderPass;
 
-	const uint32_t ATTATCHMENT_COUNT = 3;
+	const uint32_t ATTATCHMENT_COUNT = 2;
 	VkAttachmentDescription attatchments[ATTATCHMENT_COUNT] =
 	{
 		defineFramebufColor(swapchainFormat),
-		defineFramebufDepth(depthFormat),
-		defineFramebufShadowMap(shadowMapFormat)
+		defineFramebufDepth(depthFormat)
 	};
 
 	VkAttachmentReference colorRef = {};
@@ -310,45 +328,17 @@ VkRenderPass ShadowScene::defineRenderPass(VkDevice device, VkFormat swapchainFo
 	depthRef.attachment = 1;
 	depthRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-	VkAttachmentReference shadowMapWriteRef = {};
-	shadowMapWriteRef.attachment = 2;
-	shadowMapWriteRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-	additionalAttatchments.push_back(shadowMap->imageInfo.imageView);
-
-
-	const uint32_t SUBPASS_COUNT = 2;
-	VkSubpassDescription subpasses[SUBPASS_COUNT];
-	subpasses[0].flags = 0;
-	subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpasses[0].inputAttachmentCount = 0;
-	subpasses[0].pInputAttachments = nullptr;
-	subpasses[0].colorAttachmentCount = 0;
-	subpasses[0].pColorAttachments = nullptr;
-	subpasses[0].pResolveAttachments = nullptr;
-	subpasses[0].pDepthStencilAttachment = &shadowMapWriteRef;
-	subpasses[0].preserveAttachmentCount = 0;
-	subpasses[0].pPreserveAttachments = nullptr;
-
-	subpasses[1].flags = 0;
-	subpasses[1].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpasses[1].inputAttachmentCount = 0;
-	subpasses[1].pInputAttachments = nullptr;
-	subpasses[1].colorAttachmentCount = 1;
-	subpasses[1].pColorAttachments = &colorRef;
-	subpasses[1].pResolveAttachments = nullptr;
-	subpasses[1].pDepthStencilAttachment = &depthRef;
-	subpasses[1].preserveAttachmentCount = 0;
-	subpasses[1].pPreserveAttachments = nullptr;
-
-	VkSubpassDependency dependency = {};
-	dependency.srcSubpass = 0;
-	dependency.dstSubpass = 1;
-	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	dependency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-	dependency.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-	dependency.dstAccessMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT; // VK_ACCESS_SHADER_READ_BIT?
-	dependency.dependencyFlags = 0;
+	VkSubpassDescription subpass;
+	subpass.flags = 0;
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.inputAttachmentCount = 0;
+	subpass.pInputAttachments = nullptr;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &colorRef;
+	subpass.pResolveAttachments = nullptr;
+	subpass.pDepthStencilAttachment = &depthRef;
+	subpass.preserveAttachmentCount = 0;
+	subpass.pPreserveAttachments = nullptr;
 
 	VkRenderPassCreateInfo renderPassCreateInfo = {};
 	renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -356,15 +346,64 @@ VkRenderPass ShadowScene::defineRenderPass(VkDevice device, VkFormat swapchainFo
 	renderPassCreateInfo.flags = 0;
 	renderPassCreateInfo.attachmentCount = ATTATCHMENT_COUNT;
 	renderPassCreateInfo.pAttachments = attatchments;
-	renderPassCreateInfo.subpassCount = 2;
-	renderPassCreateInfo.pSubpasses = subpasses;
-	renderPassCreateInfo.dependencyCount = 1;
-	renderPassCreateInfo.pDependencies = &dependency;
+	renderPassCreateInfo.subpassCount = 1;
+	renderPassCreateInfo.pSubpasses = &subpass;
+	renderPassCreateInfo.dependencyCount = 0;
+	renderPassCreateInfo.pDependencies = nullptr;
 
 	if (vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &renderPass) != VK_SUCCESS)
 		throw std::runtime_error("Failed to create shadow render pass");
 
 	return renderPass;
+}
+
+void ShadowScene::defineShadowRenderPass(VkDevice device)
+{
+	VkAttachmentDescription attatchment = defineFramebufShadowMap(shadowMapFormat);
+
+	VkAttachmentReference shadowMapWriteRef = {};
+	shadowMapWriteRef.attachment = 0;
+	shadowMapWriteRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkSubpassDescription subpass;
+	subpass.flags = 0;
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.inputAttachmentCount = 0;
+	subpass.pInputAttachments = nullptr;
+	subpass.colorAttachmentCount = 0;
+	subpass.pColorAttachments = nullptr;
+	subpass.pResolveAttachments = nullptr;
+	subpass.pDepthStencilAttachment = &shadowMapWriteRef;
+	subpass.preserveAttachmentCount = 0;
+	subpass.pPreserveAttachments = nullptr;
+
+	VkRenderPassCreateInfo renderPassCreateInfo = {};
+	renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	renderPassCreateInfo.pNext = nullptr;
+	renderPassCreateInfo.flags = 0;
+	renderPassCreateInfo.attachmentCount = 1;
+	renderPassCreateInfo.pAttachments = &attatchment;
+	renderPassCreateInfo.subpassCount = 1;
+	renderPassCreateInfo.pSubpasses = &subpass;
+	renderPassCreateInfo.dependencyCount = 0;
+	renderPassCreateInfo.pDependencies = nullptr;
+
+	if (vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &shadowRenderPass) != VK_SUCCESS)
+		throw std::runtime_error("Failed to create shadow render pass");
+
+	VkFramebufferCreateInfo shadowFramebufferCreateInfo = {};
+	shadowFramebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	shadowFramebufferCreateInfo.pNext = nullptr;
+	shadowFramebufferCreateInfo.flags = 0;
+	shadowFramebufferCreateInfo.renderPass = shadowRenderPass;
+	shadowFramebufferCreateInfo.attachmentCount = 1;
+	shadowFramebufferCreateInfo.pAttachments = &(shadowMap->imageInfo.imageView);
+	shadowFramebufferCreateInfo.width = shadowMapSize;
+	shadowFramebufferCreateInfo.height = shadowMapSize;
+	shadowFramebufferCreateInfo.layers = 1;
+
+	if (vkCreateFramebuffer(device, &shadowFramebufferCreateInfo, nullptr, &shadowFramebuffer) != VK_SUCCESS)
+		throw std::runtime_error("Failed to create shadow framebuffer");
 }
 
 void ShadowScene::createBuffers()

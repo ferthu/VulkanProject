@@ -447,6 +447,15 @@ void VulkanRenderer::nextFrame()
 }
 
 VulkanRenderer::FrameInfo VulkanRenderer::beginFramePass(VkFramebuffer* frameBuffer)
+{	
+	FrameInfo info = beginCommandBuffer();
+
+	beginRenderPass(info._buf, frameBuffer);
+
+	return info;
+}
+
+VulkanRenderer::FrameInfo VulkanRenderer::beginCommandBuffer()
 {
 	VkCommandBuffer cmdBuf = _frameCmdBuf[getFrameIndex()];
 	waitFence(device, renderFence[getFrameIndex()]);
@@ -456,6 +465,16 @@ VulkanRenderer::FrameInfo VulkanRenderer::beginFramePass(VkFramebuffer* frameBuf
 	// Begin recording frame commands
 	beginCmdBuf(cmdBuf, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
+	FrameInfo info;
+	info._buf = cmdBuf;
+	info._swapChainIndex = swapChainImgIndex;
+	info._swapChainImage = swapchainImages[swapChainImgIndex];
+
+	return info;
+}
+
+void VulkanRenderer::beginRenderPass(VkCommandBuffer cmdBuf, VkFramebuffer* frameBuffer)
+{
 	//Render pass
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -468,7 +487,7 @@ VulkanRenderer::FrameInfo VulkanRenderer::beginFramePass(VkFramebuffer* frameBuf
 	VkClearValue* clearValues = new VkClearValue[NUM_FRAME_ATTACH];
 	clearValues[0].color = { this->clearColor.r, this->clearColor.g, this->clearColor.b, this->clearColor.a };
 	clearValues[1].depthStencil = { 1.0f, 0 };
-	
+
 	// Set clear value for any additional attatchments to a depth stencil clear value
 	for (int i = 2; i < NUM_FRAME_ATTACH; ++i)
 		clearValues[i].depthStencil = { 1.0f, 0 };
@@ -478,14 +497,7 @@ VulkanRenderer::FrameInfo VulkanRenderer::beginFramePass(VkFramebuffer* frameBuf
 
 	vkCmdBeginRenderPass(cmdBuf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	FrameInfo info;
-	info._buf = cmdBuf;
-	info._swapChainIndex = swapChainImgIndex;
-	info._swapChainImage = swapchainImages[swapChainImgIndex];
-
 	delete clearValues;
-
-	return info;
 }
 
 void VulkanRenderer::submitFramePass()

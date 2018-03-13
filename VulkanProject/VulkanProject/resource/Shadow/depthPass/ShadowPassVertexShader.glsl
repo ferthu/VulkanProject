@@ -9,5 +9,5 @@ layout(set=0,binding=0) uniform shadowTransform
 
 void main()
 {
-	gl_Position = position * st.transform;
+	gl_Position = st.transform * position;
 }

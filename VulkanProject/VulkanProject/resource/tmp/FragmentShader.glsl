@@ -11,9 +11,11 @@ layout(location = 0) out vec4 outColor;
 
 void main()
 {
-	vec4 windowSpacePos = gl_FragCoord / gl_FragCoord.w;
+	vec4 windowSpacePos = vec4(gl_FragCoord.x / 800.0f, gl_FragCoord.y / 600.0f, gl_FragCoord.z, 1);
 	
-	vec4 lightSpacePos = windowSpacePos * tl.toLight;
+	vec4 lightSpacePos = tl.toLight * windowSpacePos;
 	lightSpacePos /= lightSpacePos.w;
-	outColor = vec4(0.8, 0.5, 0.9, 1.0) * texture(shadowMap, lightSpacePos.xyz) + vec4(0.1, 0.1, 0.1, 0.1);
+	outColor = vec4(1.0, 1.0, 1.0, 1.0) * texture(shadowMap, lightSpacePos.xyz, 0.01f) + vec4(0.1, 0.1, 0.1, 0.1);
+	
+	outColor = lightSpacePos;
 }
