@@ -16,10 +16,10 @@ int main(int argc, const char* argv)
 {
 	VulkanRenderer renderer;
 
-	renderer.initialize( new ComputeExperiment(ComputeExperiment::Mode::MULTI_DISPATCH), 256, 256, TRIPLE_BUFFERED);
+	//renderer.initialize( new ComputeExperiment(ComputeExperiment::Mode::MULTI_DISPATCH), 256, 256, TRIPLE_BUFFERED);
 	//renderer.initialize(new ComputeScene(), 512, 512, TRIPLE_BUFFERED);
 	//renderer.initialize(new TriangleScene(), 512, 512, 0);
-	//renderer.initialize(new ShadowScene(glm::mat4(1.0f), glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -2.0f))), 800, 600);
+	renderer.initialize(new ShadowScene(glm::mat4(1.0f), glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -2.0f))), 800, 600, 0);
 
 	SDL_Event windowEvent;
 	while (true)

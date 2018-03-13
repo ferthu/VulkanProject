@@ -76,6 +76,15 @@ void TechniqueVulkan::createGraphicsPipeline(VkPipelineLayout layout, VkPipeline
 	VkPipelineDepthStencilStateCreateInfo depthStencil =
 		defineDepthState();
 
+	VkDynamicState viewportDynamicState = VkDynamicState::VK_DYNAMIC_STATE_VIEWPORT;
+
+	VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {};
+	dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamicStateCreateInfo.pNext = nullptr;
+	dynamicStateCreateInfo.flags = 0;
+	dynamicStateCreateInfo.dynamicStateCount = 1;
+	dynamicStateCreateInfo.pDynamicStates = &viewportDynamicState;
+
 	VkGraphicsPipelineCreateInfo pipelineInfo = {};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipelineInfo.pNext = nullptr;
@@ -90,7 +99,7 @@ void TechniqueVulkan::createGraphicsPipeline(VkPipelineLayout layout, VkPipeline
 	pipelineInfo.pMultisampleState = &pipelineMultisampleStateCreateInfo;
 	pipelineInfo.pDepthStencilState = &depthStencil;
 	pipelineInfo.pColorBlendState = &pipelineColorBlendStateCreateInfo;
-	pipelineInfo.pDynamicState = nullptr;
+	pipelineInfo.pDynamicState = &dynamicStateCreateInfo;
 	pipelineInfo.layout = layout;
 	pipelineInfo.renderPass = _passHandle;
 	pipelineInfo.subpass = subpassIndex;

@@ -122,6 +122,7 @@ public:
 	unsigned int getWidth();
 	unsigned int getHeight();
 
+	VkDescriptorSetLayout getDescriptorSetLayout(uint32_t index);
 
 private:
 	Scene * scene;
@@ -183,6 +184,9 @@ private:
 
 	VkSurfaceFormatKHR swapchainFormat;
 	VkExtent2D swapchainExtent;
+
+	// Number of attatchments in the frame buffers
+	uint32_t NUM_FRAME_ATTACH = 0;
 
 	void createStagingBuffer();
 	uint32_t updateStagingBuffer(const void* data, size_t size);								// Writes memory from data into the staging buffer

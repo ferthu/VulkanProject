@@ -15,6 +15,7 @@ public:
 	void setData(const void * data, size_t byteSize, uint32_t setBindIndex, VkDescriptorSetLayout layout, VkBufferUsageFlags usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 	void bind(VkCommandBuffer cmdBuf, VkPipelineLayout layout, VkPipelineBindPoint bindPoint= VK_PIPELINE_BIND_POINT_GRAPHICS);
 	VkBuffer getBuffer();
+	void setUseCustomDescriptor(bool useCustomDescriptor);
 
 private:
 	// Single buffered:
@@ -28,6 +29,9 @@ private:
 	uint32_t location;
 	size_t poolOffset, memSize;
 
+	// True if user handles descriptors and binding on their own
+	// Makes the constant buffer ignore its own descriptor handling
+	bool customDescriptor = false;
 };
 
 /* Double buffered Uniform buffer

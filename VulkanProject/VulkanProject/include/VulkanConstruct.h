@@ -833,8 +833,8 @@ VkAttachmentDescription defineFramebufShadowMap(VkFormat shadowMapFormat)
 	shadowMapAttach.storeOp = VK_ATTACHMENT_STORE_OP_STORE;				// Store col/depth buff data for access/present.
 	shadowMapAttach.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	shadowMapAttach.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	shadowMapAttach.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	shadowMapAttach.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	shadowMapAttach.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	shadowMapAttach.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 	return shadowMapAttach;
 }
 

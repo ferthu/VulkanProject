@@ -66,4 +66,6 @@ private:
 	VkDescriptorSet renderPassDescriptorSet;
 
 	vk::LayoutConstruct pipelineLayoutConstruct;
+
+	VkDescriptorPool desciptorPool;
 };
