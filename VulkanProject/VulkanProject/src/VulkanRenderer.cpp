@@ -558,7 +558,7 @@ void VulkanRenderer::submitCompute(uint32_t computeQueueIndex, bool syncPrevious
 	submitInfo.pCommandBuffers = &compBuf;
 	submitInfo.signalSemaphoreCount = (uint32_t)std::size(signalSemaphores);
 	submitInfo.pSignalSemaphores = signalSemaphores;
-	VkResult err = vkQueueSubmit(queues[QueueType::COMPUTE].queue, 1, &submitInfo, computeFence[computeQueueIndex]);
+	VkResult err = vkQueueSubmit(queues[QueueType::COMPUTE + computeQueueIndex].queue, 1, &submitInfo, computeFence[computeQueueIndex]);
 	if (err != VK_SUCCESS) {
 		throw std::runtime_error("Failed to submit draw command buffer!");
 	}

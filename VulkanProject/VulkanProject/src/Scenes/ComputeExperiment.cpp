@@ -4,8 +4,8 @@
 #include "VulkanConstruct.h"
 #include <iostream>
 
-ComputeExperiment::ComputeExperiment(Mode mode, uint32_t num_particles)
-	: mode(mode), NUM_PARTICLE(num_particles)
+ComputeExperiment::ComputeExperiment(Mode mode, ShaderMode shader, uint32_t num_particles)
+	: mode(mode), shaderMode(shader), NUM_PARTICLE(num_particles)
 {
 }
 
@@ -21,6 +21,12 @@ ComputeExperiment::~ComputeExperiment()
 	delete smallOpBuf;
 	smallOpLayout.destroy(_renderHandle->getDevice());
 	postLayout.destroy(_renderHandle->getDevice());
+
+	if (shaderMode == ShaderMode::MEM_LIMITED)
+	{
+		delete readImg;
+		delete readSampler;
+	}
 }
 #define COMPILE
 
@@ -56,9 +62,14 @@ void ComputeExperiment::initialize(VulkanRenderer *handle)
 
 	//Layout
 	VkDescriptorSetLayoutBinding binding;
-	postLayout = vk::LayoutConstruct(1);
+	postLayout = vk::LayoutConstruct(shaderMode == ShaderMode::MEM_LIMITED ? 2 : 1);
 	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT);
 	postLayout[0] = createDescriptorLayout(_renderHandle->getDevice(), &binding, 1);
+	if (shaderMode == ShaderMode::MEM_LIMITED)
+	{
+		writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT);
+		postLayout[1] = createDescriptorLayout(_renderHandle->getDevice(), &binding, 1);
+	}
 	// Gen. layout
 	postLayout.construct(_renderHandle->getDevice());
 
@@ -66,15 +77,32 @@ void ComputeExperiment::initialize(VulkanRenderer *handle)
 	compShader = new ShaderVulkan("CopyCompute", _renderHandle);
 	compSmallOp = new ShaderVulkan("SmallOp", _renderHandle);
 #ifdef COMPILE
-	compShader->setShader("resource/Compute/ComputeRegLimited.glsl", ShaderVulkan::ShaderType::CS);
 	compSmallOp->setShader("resource/Compute/ComputeSimple.glsl", ShaderVulkan::ShaderType::CS);
+	if (shaderMode == ShaderMode::MEM_LIMITED)
+		compShader->setShader("resource/Compute/ComputeMemLimited.glsl", ShaderVulkan::ShaderType::CS);
+	else
+		compShader->setShader("resource/Compute/ComputeRegLimited.glsl", ShaderVulkan::ShaderType::CS);
 #else
-	compShader->setShader("resource/tmp/ComputeRegLimited.spv", ShaderVulkan::ShaderType::CS);
 	compSmallOp->setShader("resource/tmp/ComputeSimple.spv", ShaderVulkan::ShaderType::CS);
+	if (shaderMode == ShaderMode::MEM_LIMITED)
+		compShader->setShader("resource/tmp/ComputeMemLimited.spv", ShaderVulkan::ShaderType::CS);
+	else
+		compShader->setShader("resource/tmp/ComputeRegLimited.spv", ShaderVulkan::ShaderType::CS);
 #endif
 	compShader->compileMaterial(err);
 	compSmallOp->compileMaterial(err);
-	
+
+	// Image
+	if (shaderMode == ShaderMode::MEM_LIMITED)
+	{
+		readSampler = new Sampler2DVulkan(_renderHandle);
+		readSampler->setWrap(VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT, VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT);
+		readSampler->setMagFilter(VkFilter::VK_FILTER_NEAREST);
+		readSampler->setMinFilter(VkFilter::VK_FILTER_NEAREST);
+		readImg = new Texture2DVulkan(_renderHandle, readSampler);
+		readImg->loadFromFile("resource/fatboy.png");
+		readImg->attachBindPoint(1, postLayout[1]);
+	}
 	// Framebuf targets
 	swapChainImgDesc.resize(_renderHandle->getSwapChainLength());
 	VkDescriptorImageInfo imgInfo[5];
@@ -163,6 +191,8 @@ void ComputeExperiment::frame()
 	techniquePost->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	// Bind resources
 	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
+	if(shaderMode == ShaderMode::MEM_LIMITED)
+		readImg->bind(info._buf, 1, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
 	// Dispatch
 	uint32_t dimX = _renderHandle->getWidth() / 16;
 	uint32_t dimY = _renderHandle->getHeight() / 16;

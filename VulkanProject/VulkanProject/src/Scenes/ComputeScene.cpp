@@ -15,8 +15,8 @@ ComputeScene::~ComputeScene()
 	delete triShader;
 	delete triBuffer;
 
-	delete techniquePost;
-	delete compShader;
+	delete techniquePost, delete techniqueBlurHorizontal, delete techniqueBlurVertical;
+	delete compShader, delete blurHorizontal, delete blurVertical;
 	delete readImg;
 	delete readSampler;
 	postLayout.destroy(_renderHandle->getDevice());
@@ -50,9 +50,9 @@ void ComputeScene::initialize(VulkanRenderer *handle)
 	//Layout
 	VkDescriptorSetLayoutBinding binding;
 	postLayout = vk::LayoutConstruct(2);
-	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT);
-	postLayout[0] = createDescriptorLayout(_renderHandle->getDevice(), &binding, 1);
 	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT);
+	postLayout[0] = createDescriptorLayout(_renderHandle->getDevice(), &binding, 1);
+	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT);
 	postLayout[1] = createDescriptorLayout(_renderHandle->getDevice(), &binding, 1);
 	// Gen. layout
 	postLayout.construct(_renderHandle->getDevice());
@@ -62,6 +62,14 @@ void ComputeScene::initialize(VulkanRenderer *handle)
 	compShader->setShader("resource/Compute/CopyTexture.glsl", ShaderVulkan::ShaderType::CS);
 	compShader->compileMaterial(err);
 
+	blurHorizontal = new ShaderVulkan("CopyCompute", _renderHandle);
+	blurHorizontal->setShader("resource/Compute/GaussianHorizontal.glsl", ShaderVulkan::ShaderType::CS);
+	blurHorizontal->compileMaterial(err);
+
+	blurVertical = new ShaderVulkan("CopyCompute", _renderHandle);
+	blurVertical->setShader("resource/Compute/GaussianVertical.glsl", ShaderVulkan::ShaderType::CS);
+	blurVertical->compileMaterial(err);
+	
 	// Img source
 	readSampler = new Sampler2DVulkan(_renderHandle);
 	readSampler->setWrap(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
@@ -69,8 +77,9 @@ void ComputeScene::initialize(VulkanRenderer *handle)
 	readSampler->setMinFilter(VkFilter::VK_FILTER_NEAREST);
 	readImg = new Texture2DVulkan(_renderHandle, readSampler);
 	readImg->loadFromFile("resource/fatboy.png");
-	readImg->attachBindPoint(0, postLayout[0]);
+	readImg->attachBindPoint(1, postLayout[1]);
 
+	// Frame buffer image bindings
 	swapChainImgDesc.resize(_renderHandle->getSwapChainLength());
 	VkDescriptorImageInfo imgInfo[5];
 	VkWriteDescriptorSet writeInfo[5];
@@ -79,7 +88,7 @@ void ComputeScene::initialize(VulkanRenderer *handle)
 		imgInfo[i].sampler = NULL;
 		imgInfo[i].imageView = _renderHandle->getSwapChainView(i);
 		imgInfo[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-		swapChainImgDesc[i] = _renderHandle->generateDescriptor(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, postLayout._desc + 1);
+		swapChainImgDesc[i] = _renderHandle->generateDescriptor(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, postLayout._desc);
 		writeDescriptorStruct_IMG_STORAGE(writeInfo[i], swapChainImgDesc[i], 0, 0, 1, imgInfo + i);
 	}
 	vkUpdateDescriptorSets(_renderHandle->getDevice(), (uint32_t)swapChainImgDesc.size(), writeInfo, 0, nullptr);
@@ -91,6 +100,8 @@ void ComputeScene::makeTechnique()
 {
 
 	techniquePost = new TechniqueVulkan(_renderHandle, compShader, postLayout._layout);
+	techniqueBlurHorizontal = new TechniqueVulkan(_renderHandle, blurHorizontal, postLayout._layout);
+	techniqueBlurVertical = new TechniqueVulkan(_renderHandle, blurVertical, postLayout._layout);
 
 	const uint32_t NUM_BUFFER = 1;
 	const uint32_t NUM_ATTRI = 1;
@@ -130,33 +141,50 @@ void ComputeScene::mainPass()
 	_renderHandle->submitFramePass();
 
 }
-void ComputeScene::post()
+void ComputeScene::post(VulkanRenderer::FrameInfo info)
 {
 	// Post pass
-	VulkanRenderer::FrameInfo info = _renderHandle->beginCompute();
 	transition_ComputeToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
 
 	// Bind compute shader
 	techniquePost->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	// Bind resources
- 	readImg->bind(info._buf, 0, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
-	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 1, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
+ 	readImg->bind(info._buf, 1, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
+	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
 	// Dispatch
 	uint32_t dim = 512 / 16;
 	vkCmdDispatch(info._buf, dim, dim, 1);
-	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
-	_renderHandle->submitCompute();
-	
-	_renderHandle->present();
+}
+
+void ComputeScene::postBlur(VulkanRenderer::FrameInfo info)
+{
+
+	// Bind compute shader
+	techniqueBlurHorizontal->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
+	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
+	// Dispatch
+	vkCmdDispatch(info._buf, 1, 512, 1);
+
+
+	// Bind compute shader
+	techniqueBlurVertical->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
+	// Dispatch
+	vkCmdDispatch(info._buf, 1, 512, 1);
 }
 
 void ComputeScene::frame()
 {
-	if (mode == Mode::Sequential)
-	{
-		mainPass();
-		post();
-	}
+
+	mainPass();
+	VulkanRenderer::FrameInfo info = _renderHandle->beginCompute();
+	post(info);
+	if(mode == Mode::Blur)
+		postBlur(info);
+
+	// Finish
+	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
+	_renderHandle->submitCompute();
+	_renderHandle->present();
 }
 
 

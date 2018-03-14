@@ -16,14 +16,19 @@ public:
 	
 	enum Mode
 	{
-		REG_LIMITED,
-		MEM_CONSUMPTION,
+		ASYNC,
 		SEQUENTIAL,
 		MULTI_QUEUE,
 		MULTI_DISPATCH
 	};
+
+	enum ShaderMode
+	{
+		MEM_LIMITED,
+		REG_LIMITED
+	};
 	
-	ComputeExperiment(Mode mode = REG_LIMITED, uint32_t num_particles = 1024 * 512);
+	ComputeExperiment(Mode mode = ASYNC, ShaderMode shader = REG_LIMITED, uint32_t num_particles = 1024 * 512);
 	~ComputeExperiment();
 
 	virtual void frame();
@@ -33,6 +38,7 @@ public:
 
 private:
 	Mode mode;
+	ShaderMode shaderMode;
 	uint32_t NUM_PARTICLE;
 
 	void makeTechnique();
@@ -44,10 +50,14 @@ private:
 	VertexBufferVulkan::Binding triVertexBinding;
 
 	// Post pass
-	TechniqueVulkan * techniquePost, *techniqueSmallOp;
+	TechniqueVulkan *techniquePost, *techniqueSmallOp;
 	vk::LayoutConstruct postLayout, smallOpLayout;
 	ShaderVulkan *compShader, *compSmallOp;
 	ConstantBufferVulkan *smallOpBuf;
+	
+	Sampler2DVulkan *readSampler;
+	Texture2DVulkan *readImg;
+
 	std::vector<VkDescriptorSet> swapChainImgDesc;
 };
 

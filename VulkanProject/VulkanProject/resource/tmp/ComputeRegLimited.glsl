@@ -23,8 +23,8 @@ void main() {
   }
   arr[N-1] /= 100.f;
 
-  for(uint i = 0; i < 50000; i++)
-	arr[N-1] = cos(sin(arr[N-1]));
+  //for(uint i = 0; i < 50000; i++)
+	//arr[N-1] = cos(sin(arr[N-1]));
 
   vec4 pixel = vec4(arr[N-1], arr[N-1], arr[N-1], 1.f);
   // output to a specific pixel in the image

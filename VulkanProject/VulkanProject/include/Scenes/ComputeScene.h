@@ -15,7 +15,8 @@ class ComputeScene :
 public:
 
 	enum Mode {
-		Sequential
+		Sequential,
+		Blur
 	};
 
 	ComputeScene(Mode mode = Sequential);
@@ -33,7 +34,8 @@ private:
 	void makeTechnique();
 
 	void mainPass();
-	void post();
+	void post(VulkanRenderer::FrameInfo info);
+	void postBlur(VulkanRenderer::FrameInfo info);
 
 	// Render pass
 	ShaderVulkan *triShader;
@@ -42,9 +44,9 @@ private:
 	VertexBufferVulkan::Binding triVertexBinding;
 
 	// Post pass
-	TechniqueVulkan * techniquePost;
+	TechniqueVulkan * techniquePost, *techniqueBlurHorizontal, *techniqueBlurVertical;
 	vk::LayoutConstruct postLayout;
-	ShaderVulkan *compShader;
+	ShaderVulkan *compShader, *blurHorizontal, *blurVertical;
 	Sampler2DVulkan *readSampler;
 	Texture2DVulkan *readImg;
 	std::vector<VkDescriptorSet> swapChainImgDesc;
