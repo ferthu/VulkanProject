@@ -12,6 +12,6 @@ layout(location = 0) out vec3 out_normal;
 
 void main()
 {
-	vec4 vertexPos = position * t.transform;
-	out_normal = (vec4(normal.xyz, 0.0) * t.transform).xyz;
+	gl_Position = t.transform * position;
+	out_normal = (t.transform * vec4(normal, 0.0)).xyz;
 }

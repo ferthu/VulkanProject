@@ -78,6 +78,11 @@ public:
 	};
 	// Begins a frame pass with a supplied custom frame buffer
 	FrameInfo beginFramePass(VkFramebuffer* frameBuffer = NULL);
+
+	// These two functions are used instead of beginFramePass when their functionality needs to be separated
+	FrameInfo beginCommandBuffer();
+	void beginRenderPass(VkCommandBuffer cmdBuf, VkFramebuffer* frameBuffer = NULL);
+
 	FrameInfo beginCompute(uint32_t computeQueueIndex = 0);
 	void submitFramePass();
 	void submitCompute(uint32_t computeQueueIndex = 0, bool syncPrevious = true);
@@ -122,6 +127,7 @@ public:
 	unsigned int getWidth();
 	unsigned int getHeight();
 
+	VkDescriptorSetLayout getDescriptorSetLayout(uint32_t index);
 
 private:
 	Scene * scene;
@@ -183,6 +189,9 @@ private:
 
 	VkSurfaceFormatKHR swapchainFormat;
 	VkExtent2D swapchainExtent;
+
+	// Number of attatchments in the frame buffers
+	uint32_t NUM_FRAME_ATTACH = 0;
 
 	void createStagingBuffer();
 	uint32_t updateStagingBuffer(const void* data, size_t size);								// Writes memory from data into the staging buffer

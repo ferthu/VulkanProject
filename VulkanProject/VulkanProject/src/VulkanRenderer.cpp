@@ -275,7 +275,7 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	frameBufferPass = scene->defineRenderPass(device, swapchainCreateInfo.imageFormat, depthFormat, additionalAttatchments);
 	
 	// Create frame buffers.
-	const uint32_t NUM_FRAME_ATTACH = 2 + (uint32_t)additionalAttatchments.size();
+	NUM_FRAME_ATTACH = 2 + (uint32_t)additionalAttatchments.size();
 	swapChainFramebuffers.resize(swapchainImages.size());
 	for (size_t i = 0; i < swapChainFramebuffers.size(); i++)
 	{
@@ -447,6 +447,15 @@ void VulkanRenderer::nextFrame()
 }
 
 VulkanRenderer::FrameInfo VulkanRenderer::beginFramePass(VkFramebuffer* frameBuffer)
+{	
+	FrameInfo info = beginCommandBuffer();
+
+	beginRenderPass(info._buf, frameBuffer);
+
+	return info;
+}
+
+VulkanRenderer::FrameInfo VulkanRenderer::beginCommandBuffer()
 {
 	VkCommandBuffer cmdBuf = _frameCmdBuf[getFrameIndex()];
 	waitFence(device, renderFence[getFrameIndex()]);
@@ -456,6 +465,16 @@ VulkanRenderer::FrameInfo VulkanRenderer::beginFramePass(VkFramebuffer* frameBuf
 	// Begin recording frame commands
 	beginCmdBuf(cmdBuf, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
+	FrameInfo info;
+	info._buf = cmdBuf;
+	info._swapChainIndex = swapChainImgIndex;
+	info._swapChainImage = swapchainImages[swapChainImgIndex];
+
+	return info;
+}
+
+void VulkanRenderer::beginRenderPass(VkCommandBuffer cmdBuf, VkFramebuffer* frameBuffer)
+{
 	//Render pass
 	VkRenderPassBeginInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -465,20 +484,20 @@ VulkanRenderer::FrameInfo VulkanRenderer::beginFramePass(VkFramebuffer* frameBuf
 	renderPassInfo.renderArea.extent = swapchainExtent;
 
 	// Clear params
-	const uint32_t num_clear_values = 2;
-	VkClearValue clearValues[num_clear_values];
+	VkClearValue* clearValues = new VkClearValue[NUM_FRAME_ATTACH];
 	clearValues[0].color = { this->clearColor.r, this->clearColor.g, this->clearColor.b, this->clearColor.a };
 	clearValues[1].depthStencil = { 1.0f, 0 };
-	renderPassInfo.clearValueCount = num_clear_values;
+
+	// Set clear value for any additional attatchments to a depth stencil clear value
+	for (int i = 2; i < NUM_FRAME_ATTACH; ++i)
+		clearValues[i].depthStencil = { 1.0f, 0 };
+
+	renderPassInfo.clearValueCount = NUM_FRAME_ATTACH;
 	renderPassInfo.pClearValues = clearValues;
 
 	vkCmdBeginRenderPass(cmdBuf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	FrameInfo info;
-	info._buf = cmdBuf;
-	info._swapChainIndex = swapChainImgIndex;
-	info._swapChainImage = swapchainImages[swapChainImgIndex];
-	return info;
+	delete clearValues;
 }
 
 void VulkanRenderer::submitFramePass()
@@ -906,6 +925,11 @@ unsigned int VulkanRenderer::getWidth()
 unsigned int VulkanRenderer::getHeight()
 {
 	return swapchainExtent.height;
+}
+
+VkDescriptorSetLayout VulkanRenderer::getDescriptorSetLayout(uint32_t index)
+{
+	return descriptorLayouts[index];
 }
 
 void VulkanRenderer::setWinTitle(const char* title)

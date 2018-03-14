@@ -24,18 +24,21 @@ void ConstantBufferVulkan::transferData(const void* data, size_t byteSize, VkBuf
 
 		// Set the descriptor info
 
-		// Cyclic double buffer, generate two descriptors
-		VkWriteDescriptorSet writes[1];
-		VkDescriptorBufferInfo descriptorInfo[1];
-		descriptorInfo[0].buffer = buffer;
-		descriptorInfo[0].offset = 0;
-		descriptorInfo[0].range = byteSize;
+		if (!customDescriptor)
+		{
+			// Cyclic double buffer, generate two descriptors
+			VkWriteDescriptorSet writes[1];
+			VkDescriptorBufferInfo descriptorInfo[1];
+			descriptorInfo[0].buffer = buffer;
+			descriptorInfo[0].offset = 0;
+			descriptorInfo[0].range = byteSize;
 
-		if (hasFlag(usage, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT))
-			writeDescriptorStruct_BUFFER(writes[0], descriptor, 0, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorInfo);
-		else
-			writeDescriptorStruct_BUFFER(writes[0], descriptor, 0, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorInfo);
-		vkUpdateDescriptorSets(_renderHandle->getDevice(), 1, writes, 0, nullptr);
+			if (hasFlag(usage, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT))
+				writeDescriptorStruct_BUFFER(writes[0], descriptor, 0, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorInfo);
+			else
+				writeDescriptorStruct_BUFFER(writes[0], descriptor, 0, 0, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorInfo);
+			vkUpdateDescriptorSets(_renderHandle->getDevice(), 1, writes, 0, nullptr);
+		}
 		// Set initial frame data
 		_renderHandle->transferBufferInitial(buffer, data, byteSize, 0);
 	}
@@ -48,7 +51,7 @@ void ConstantBufferVulkan::transferData(const void* data, size_t byteSize, VkBuf
 void ConstantBufferVulkan::setData(const void * data, size_t byteSize, uint32_t setBindIndex, VkDescriptorSetLayout layout, VkBufferUsageFlags usage)
 {
 	location = setBindIndex;
-	if (!buffer)
+	if (!buffer && !customDescriptor)
 	{
 		// Gen the descriptor associated with the buffer
 		if(hasFlag(usage, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT))
@@ -62,7 +65,7 @@ void ConstantBufferVulkan::setData(const void * data, size_t byteSize, uint32_t 
 void ConstantBufferVulkan::setData(const void * data, size_t byteSize, uint32_t setBindIndex, VkBufferUsageFlags usage)
 {
 	location = setBindIndex;
-	if (!buffer)
+	if (!buffer && !customDescriptor)
 	{
 		// Gen the descriptor associated with the buffer
 		if (hasFlag(usage, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT))
@@ -81,6 +84,11 @@ void ConstantBufferVulkan::bind(VkCommandBuffer cmdBuf, VkPipelineLayout layout,
 VkBuffer ConstantBufferVulkan::getBuffer()
 {
 	return buffer;
+}
+
+void ConstantBufferVulkan::setUseCustomDescriptor(bool useCustomDescriptor)
+{
+	customDescriptor = useCustomDescriptor;
 }
 
 #pragma endregion

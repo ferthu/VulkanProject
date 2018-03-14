@@ -86,7 +86,7 @@ void Texture2DVulkan::createShadowMap(uint32_t height, uint32_t width, VkFormat 
 	imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 	imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 	imageCreateInfo.format = shadowMapFormat;
-	imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
 	if (vkCreateImage(_renderHandle->getDevice(), &imageCreateInfo, nullptr, &_imageHandle) != VK_SUCCESS)
 		throw std::runtime_error("Failed to create shadow map");
 

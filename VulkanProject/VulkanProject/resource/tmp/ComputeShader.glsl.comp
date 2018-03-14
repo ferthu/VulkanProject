@@ -6,7 +6,7 @@ struct Particle
 	vec2 vel;
 };
 
-const int complexity = 10;
+const int complexity = 5000;
 // Binding 0 : Position storage buffer
 layout(std140, binding = 0) buffer Pos
 {
