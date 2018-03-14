@@ -24,7 +24,7 @@ int main(int argc, const char* argv)
 
 	VulkanRenderer renderer;
 
-	renderer.initialize( new ComputeExperiment(ComputeExperiment::Mode::, ComputeExperiment::ShaderMode::REG_LIMITED), 1024, 1024, TRIPLE_BUFFERED); // 256, 256
+	renderer.initialize( new ComputeExperiment(ComputeExperiment::Mode::ASYNC, ComputeExperiment::ShaderMode::MEM_LIMITED, 1024 * 512), 1024, 1024, TRIPLE_BUFFERED); // 256, 256
 	//renderer.initialize(new ComputeScene(ComputeScene::Mode::Blur), 512, 512, TRIPLE_BUFFERED);
 	//renderer.initialize(new TriangleScene(), 512, 512, 0);
 	//glm::perspective(80.0f, 800.0f / 600.0f, 0.1f, 10.0f);
