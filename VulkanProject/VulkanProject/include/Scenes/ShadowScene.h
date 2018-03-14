@@ -14,7 +14,7 @@ class ShadowScene :
 	public Scene
 {
 public:
-	ShadowScene(glm::mat4 transformMatrix, glm::mat4 lightMatrix);
+	ShadowScene();
 	virtual ~ShadowScene();
 
 	virtual void frame();

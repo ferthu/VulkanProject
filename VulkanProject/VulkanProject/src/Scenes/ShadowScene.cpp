@@ -8,8 +8,18 @@
 transformMatrix	<< The matrix that transforms geometry into the camera's clip space.
 lightMatrix		<< The matrix that transforms geometry into the light's clip space.
 */
-ShadowScene::ShadowScene(glm::mat4 transformMatrix, glm::mat4 lightMatrix)
+ShadowScene::ShadowScene()
 {
+	glm::mat4 cameraMatrix = glm::mat4(1.0f);
+	cameraMatrix = glm::translate(cameraMatrix, glm::vec3(0.0f, 0.0f, -2.0f));
+	cameraMatrix = glm::rotate(cameraMatrix, glm::pi<float>() * 0.0f, glm::vec3(0, 1, 0));
+	cameraMatrix = glm::perspective(2.0f, 600.0f / 800.0f, 0.1f, 20.0f) * cameraMatrix;
+
+	glm::mat4 lightMatrix = glm::mat4(1.0f);
+	lightMatrix = glm::translate(lightMatrix, glm::vec3(0.0f, 0.0f, -2.0f));
+	lightMatrix = glm::rotate(lightMatrix, glm::pi<float>() * 0.0f, glm::vec3(0, 1, 0));
+	lightMatrix = glm::orthoLH(-5.0f, 5.0f, -5.0f, 5.0f, 0.1f, 10.0f) * lightMatrix;
+
 	this->transformMatrix = transformMatrix;
 	shadowMappingMatrix = lightMatrix;
 	clipSpaceToShadowMapMatrix = lightMatrix * glm::inverse(transformMatrix);
@@ -25,12 +35,20 @@ ShadowScene::~ShadowScene()
 	delete normalBuffer;
 
 	delete shadowMapSampler;
+	delete shadowMap;
 
 	delete depthPassTechnique;
 	delete depthPassShaders;
 
 	delete renderPassTechnique;
 	delete renderPassShaders;
+	VkDevice dev = _renderHandle->getDevice();
+
+	vkDestroyFramebuffer(dev, shadowFramebuffer, nullptr);
+	vkDestroyRenderPass(dev, shadowRenderPass, nullptr);
+	vkDestroyDescriptorPool(_renderHandle->getDevice(), desciptorPool, nullptr);
+
+	pipelineLayoutConstruct.destroy(_renderHandle->getDevice());
 }
 
 void ShadowScene::initialize(VulkanRenderer* handle)
