@@ -65,6 +65,7 @@ void TriangleScene::makeTechnique()
 void TriangleScene::frame()
 {
 	VulkanRenderer::FrameInfo info = _renderHandle->beginFramePass();
+	vkCmdSetViewport(info._buf, 0, 1, &_renderHandle->getViewport());
 
 	vkCmdBindPipeline(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, techniqueA->pipeline);
 

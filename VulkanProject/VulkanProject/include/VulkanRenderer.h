@@ -96,7 +96,7 @@ public:
 	VkDevice getDevice();
 	VkPhysicalDevice getPhysical();
 
-	VkViewport getViewport();
+	const VkViewport& getViewport();
 
 	/* Bind a physical memory partition on the device to the buffer from the specific memory pool. */
 	size_t bindPhysicalMemory(VkBuffer buffer, MemoryPool memPool);

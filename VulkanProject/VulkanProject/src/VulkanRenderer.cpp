@@ -899,7 +899,7 @@ VkPhysicalDevice VulkanRenderer::getPhysical()
 {
 	return physicalDevice;
 }
-VkViewport VulkanRenderer::getViewport()
+const VkViewport& VulkanRenderer::getViewport()
 {
 	return viewport;
 }

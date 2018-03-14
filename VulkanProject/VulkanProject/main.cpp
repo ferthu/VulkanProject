@@ -16,8 +16,8 @@ int main(int argc, const char* argv)
 {
 	VulkanRenderer renderer;
 
-	//renderer.initialize( new ComputeExperiment(ComputeExperiment::Mode::ASYNC, ComputeExperiment::ShaderMode::REG_LIMITED), 1024, 1024, TRIPLE_BUFFERED); // 256, 256
-	renderer.initialize(new ComputeScene(ComputeScene::Mode::Blur), 512, 512, TRIPLE_BUFFERED);
+	renderer.initialize( new ComputeExperiment(ComputeExperiment::Mode::ASYNC, ComputeExperiment::ShaderMode::REG_LIMITED), 1024, 1024, TRIPLE_BUFFERED); // 256, 256
+	//renderer.initialize(new ComputeScene(ComputeScene::Mode::Blur), 512, 512, TRIPLE_BUFFERED);
 	//renderer.initialize(new TriangleScene(), 512, 512, 0);
 	//glm::perspective(80.0f, 800.0f / 600.0f, 0.1f, 10.0f);
 	glm::mat4 cameraMatrix = glm::mat4(1.0f);
@@ -29,7 +29,7 @@ int main(int argc, const char* argv)
 	lightMatrix = glm::translate(lightMatrix, glm::vec3(0.0f, 0.0f, -2.0f));
 	lightMatrix = glm::rotate(lightMatrix, glm::pi<float>() * 0.0f, glm::vec3(0, 1, 0));
 	lightMatrix = glm::orthoLH(-5.0f, 5.0f, -5.0f, 5.0f, 0.1f, 10.0f) * lightMatrix;
-	renderer.initialize(new ShadowScene(cameraMatrix, lightMatrix), 800, 600, 0);
+	//renderer.initialize(new ShadowScene(cameraMatrix, lightMatrix), 800, 600, 0);
 
 	SDL_Event windowEvent;
 	while (true)

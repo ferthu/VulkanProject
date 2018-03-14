@@ -127,6 +127,7 @@ void ComputeScene::mainPass()
 {
 	// Main render pass
 	VulkanRenderer::FrameInfo info = _renderHandle->beginFramePass();
+	vkCmdSetViewport(info._buf, 0, 1, &_renderHandle->getViewport());
 
 	vkCmdBindPipeline(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, techniqueA->pipeline);
 
@@ -174,9 +175,9 @@ void ComputeScene::postBlur(VulkanRenderer::FrameInfo info)
 
 void ComputeScene::frame()
 {
-
 	mainPass();
 	VulkanRenderer::FrameInfo info = _renderHandle->beginCompute();
+
 	post(info);
 	if(mode == Mode::Blur)
 		postBlur(info);
