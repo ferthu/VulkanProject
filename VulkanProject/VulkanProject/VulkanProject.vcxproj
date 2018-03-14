@@ -129,6 +129,7 @@
     <ClCompile Include="src\Scenes\ShadowScene.cpp" />
     <ClCompile Include="src\ShaderVulkan.cpp" />
     <ClCompile Include="src\Sampler2DVulkan.cpp" />
+    <ClCompile Include="src\Stuff\ImplementationTmp.cpp" />
     <ClCompile Include="src\Stuff\RandomGenerator.cpp" />
     <ClCompile Include="src\TechniqueVulkan.cpp" />
     <ClCompile Include="src\Texture2DVulkan.cpp" />
@@ -145,10 +146,11 @@
     <ClInclude Include="include\Scenes\ShadowScene.h" />
     <ClInclude Include="include\ShaderVulkan.h" />
     <ClInclude Include="include\Sampler2DVulkan.h" />
+    <ClInclude Include="include\Stuff\ObjReaderSimple.h" />
     <ClInclude Include="include\Stuff\RandomGenerator.h" />
     <ClInclude Include="include\TechniqueVulkan.h" />
     <ClInclude Include="include\Texture2DVulkan.h" />
-    <ClInclude Include="include\UsefulFuncs.h" />
+    <ClInclude Include="include\Stuff\UsefulFuncs.h" />
     <ClInclude Include="include\VertexBufferVulkan.h" />
     <ClInclude Include="include\VulkanConstruct.h" />
     <ClInclude Include="include\VulkanRenderer.h" />

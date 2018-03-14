@@ -489,7 +489,7 @@ void VulkanRenderer::beginRenderPass(VkCommandBuffer cmdBuf, VkFramebuffer* fram
 	clearValues[1].depthStencil = { 1.0f, 0 };
 
 	// Set clear value for any additional attatchments to a depth stencil clear value
-	for (int i = 2; i < NUM_FRAME_ATTACH; ++i)
+	for (uint32_t i = 2; i < NUM_FRAME_ATTACH; ++i)
 		clearValues[i].depthStencil = { 1.0f, 0 };
 
 	renderPassInfo.clearValueCount = NUM_FRAME_ATTACH;

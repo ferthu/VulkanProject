@@ -7,6 +7,9 @@
 #include "Scenes/ComputeScene.h"
 #include "Scenes/ComputeExperiment.h"
 #include "Scenes/ShadowScene.h"
+
+#define OBJ_READER_SIMPLE
+#include "Stuff/ObjReaderSimple.h"
 #undef main
 
 void updateWinTitle(VulkanRenderer *rend);
@@ -14,6 +17,11 @@ void updateWinTitle(VulkanRenderer *rend);
 
 int main(int argc, const char* argv)
 {
+	SimpleMesh mesh, baked;
+	if (readObj("resource/Suzanne.obj", mesh))
+		std::cout << "Obj read successfull\n";
+	mesh.bake(SimpleMesh::BitFlag::NORMAL_BIT, baked);
+
 	VulkanRenderer renderer;
 
 	renderer.initialize( new ComputeExperiment(ComputeExperiment::Mode::, ComputeExperiment::ShaderMode::REG_LIMITED), 1024, 1024, TRIPLE_BUFFERED); // 256, 256
