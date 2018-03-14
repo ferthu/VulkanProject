@@ -28,7 +28,7 @@ ComputeExperiment::~ComputeExperiment()
 		delete readSampler;
 	}
 }
-#define COMPILE
+//#define COMPILE
 
 void ComputeExperiment::initialize(VulkanRenderer *handle)
 {
@@ -38,13 +38,15 @@ void ComputeExperiment::initialize(VulkanRenderer *handle)
 
 	// Render pass initiation
 	std::string err;
-#ifdef COMPILE
 	triShader = new ShaderVulkan("testShaders", _renderHandle);
+#ifdef COMPILE
 	triShader->setShader("resource/trishader/VertexShader.glsl", ShaderVulkan::ShaderType::VS);
 	triShader->setShader("resource/trishader/FragmentShader.glsl", ShaderVulkan::ShaderType::PS);
-	triShader->compileMaterial(err);
 #else
+	triShader->setShader("resource/tmp/VertexShader.spv", ShaderVulkan::ShaderType::VS);
+	triShader->setShader("resource/tmp/FragmentShader.spv", ShaderVulkan::ShaderType::PS);
 #endif
+	triShader->compileMaterial(err);
 
 
 	// Create testing vertex buffer
@@ -166,7 +168,6 @@ void ComputeExperiment::makeTechnique()
 
 void ComputeExperiment::frame()
 {
-
 	// Main render pass
 	VulkanRenderer::FrameInfo info = _renderHandle->beginFramePass();
 	vkCmdSetViewport(info._buf, 0, 1, &_renderHandle->getViewport());
@@ -239,7 +240,6 @@ void ComputeExperiment::frame()
 		transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
 		_renderHandle->submitCompute(0, true);
 	}
-
 	
 	_renderHandle->present();
 }

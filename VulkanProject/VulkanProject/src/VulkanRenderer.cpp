@@ -561,7 +561,7 @@ void VulkanRenderer::submitCompute(uint32_t computeQueueIndex, bool syncPrevious
 	if (syncPrevious && waitQueueLen > 0)
 	{
 		waitSemaphores[waitLen++] = waitQueue[waitQueueLen - 1];
-		waitQueue[waitQueueLen - 1] = computeFinished[computeQueueIndex];
+		waitQueue[waitQueueLen - 1] = computeFinished[computeQueueIndex]; // Wait prev. compute queue
 	}
 	else
 		waitQueue[waitQueueLen++] = computeFinished[computeQueueIndex];
