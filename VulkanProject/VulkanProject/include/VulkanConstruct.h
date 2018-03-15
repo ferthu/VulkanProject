@@ -1887,10 +1887,10 @@ VkPipelineRasterizationStateCreateInfo defineRasterizationState(uint32_t rasterF
 	rasterizationState.lineWidth = lineWidth; // For line rendering
 											  
 	// Depth bias
-	rasterizationState.depthBiasEnable = VK_FALSE;
-	rasterizationState.depthBiasConstantFactor = 0.0f;
-	rasterizationState.depthBiasClamp = 0.0f;
-	rasterizationState.depthBiasSlopeFactor = 1.0f;
+	rasterizationState.depthBiasEnable = VK_TRUE;
+	rasterizationState.depthBiasConstantFactor = 0.5f;
+	rasterizationState.depthBiasClamp = 4.0f;
+	rasterizationState.depthBiasSlopeFactor = 0.5f;
 	return rasterizationState;
 }
 

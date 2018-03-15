@@ -1,5 +1,6 @@
 #version 450
 layout(location = 0) in vec3 normal;
+layout(location = 1) in vec4 worldPos;
 
 layout(set=1,binding=0) uniform sampler2DShadow shadowMap;
 layout(set=1,binding=2) uniform ToLight
@@ -9,13 +10,32 @@ layout(set=1,binding=2) uniform ToLight
 
 layout(location = 0) out vec4 outColor;
 
+#define shadowMapSize 1024.0
+
 void main()
 {
-	vec4 windowSpacePos = vec4(gl_FragCoord.x / 800.0f, gl_FragCoord.y / 600.0f, gl_FragCoord.z, 1);
+	vec4 windowSpacePos = vec4(gl_FragCoord.x / shadowMapSize, gl_FragCoord.y / shadowMapSize, gl_FragCoord.z, 1);
 	
 	vec4 lightSpacePos = tl.toLight * windowSpacePos;
+
+	lightSpacePos = tl.toLight * worldPos;
 	lightSpacePos /= lightSpacePos.w;
-	outColor = vec4(1.0, 1.0, 1.0, 1.0) * texture(shadowMap, lightSpacePos.xyz, 0.01f) + vec4(0.1, 0.1, 0.1, 0.1);
-	
-	outColor = lightSpacePos;
+
+	float texelSize = 1.0 / shadowMapSize;
+	vec2 samplePos = vec2((lightSpacePos.x + 1) * 0.5, (lightSpacePos.y + 1) * 0.5);
+	vec2 frac = vec2(samplePos.x * shadowMapSize - floor(samplePos.x * shadowMapSize), samplePos.y * shadowMapSize - floor(samplePos.y * shadowMapSize));
+	vec2 flooredSamplePos = vec2(samplePos.x - frac.x / shadowMapSize, samplePos.y - frac.y / shadowMapSize);
+	float sample1 = float(!(abs(texture(shadowMap, vec3(flooredSamplePos.x, flooredSamplePos.y, 0), 0.01f) - lightSpacePos.z) > 0.01));
+	float sample2 = float(!(abs(texture(shadowMap, vec3(flooredSamplePos.x + texelSize, flooredSamplePos.y, 0), 0.01f) - lightSpacePos.z) > 0.01));
+	float sample3 = float(!(abs(texture(shadowMap, vec3(flooredSamplePos.x, flooredSamplePos.y + texelSize, 0), 0.01f) - lightSpacePos.z) > 0.01));
+	float sample4 = float(!(abs(texture(shadowMap, vec3(flooredSamplePos.x + texelSize, flooredSamplePos.y + texelSize, 0), 0.01f) - lightSpacePos.z) > 0.01));
+	float finalSample = (sample1 * (1.0 - frac.x) + sample2 * frac.x) * (1.0 - frac.y) +
+		(sample3 * (1.0 - frac.x) + sample4 * frac.x) * frac.y;
+
+	vec4 colorFromLight = vec4(0.0, 0.6, 0.7, 1.0) * finalSample;
+
+	vec4 lightDir = vec4(0, 0, 1, 0);	// Pass into shader?
+	float angleAttenuation = abs(dot(normal, lightDir.xyz));
+
+	outColor = colorFromLight * angleAttenuation + vec4(0.05, 0.03, 0.03, 1.0) * abs(dot(normal, vec3(1,0,0))) + vec4(0.05, 0.03, 0.03, 1.0);
 }

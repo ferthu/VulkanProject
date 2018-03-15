@@ -4,25 +4,23 @@
 #include "VertexBufferVulkan.h"
 
 #include "glm\gtc\matrix_transform.hpp"
-/*
-transformMatrix	<< The matrix that transforms geometry into the camera's clip space.
-lightMatrix		<< The matrix that transforms geometry into the light's clip space.
-*/
+
 ShadowScene::ShadowScene()
 {
 	glm::mat4 cameraMatrix = glm::mat4(1.0f);
-	cameraMatrix = glm::translate(cameraMatrix, glm::vec3(0.0f, 0.0f, -2.0f));
-	cameraMatrix = glm::rotate(cameraMatrix, glm::pi<float>() * 0.0f, glm::vec3(0, 1, 0));
-	cameraMatrix = glm::perspective(2.0f, 600.0f / 800.0f, 0.1f, 20.0f) * cameraMatrix;
+	cameraMatrix = rotationMatrix(glm::pi<float>() * 0.2f, glm::vec3(.0f, 1.0f, .0f)) * cameraMatrix;
+	cameraMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -4.0f)) * cameraMatrix;
+	cameraMatrix = perspectiveMatrix(600.0f / 800.0f, 1.5f, 0.1f, 10.0f) * cameraMatrix;
+	//cameraMatrix = orthographicMatrix(-4.0f, 4.0f, -4.0f, 4.0f, 0.1f, 10.0f) * cameraMatrix;
 
 	glm::mat4 lightMatrix = glm::mat4(1.0f);
-	lightMatrix = glm::translate(lightMatrix, glm::vec3(0.0f, 0.0f, -2.0f));
-	lightMatrix = glm::rotate(lightMatrix, glm::pi<float>() * 0.0f, glm::vec3(0, 1, 0));
-	lightMatrix = glm::orthoLH(-5.0f, 5.0f, -5.0f, 5.0f, 0.1f, 10.0f) * lightMatrix;
+	lightMatrix = rotationMatrix(glm::pi<float>() * 0.0f, glm::vec3(0, 1, 0)) * lightMatrix;
+	lightMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -4.0f)) * lightMatrix;
+	lightMatrix = orthographicMatrix(-4.0f, 4.0f, -4.0f, 4.0f, 0.1f, 10.0f) * lightMatrix;
 
-	this->transformMatrix = transformMatrix;
+	this->transformMatrix = cameraMatrix;
 	shadowMappingMatrix = lightMatrix;
-	clipSpaceToShadowMapMatrix = lightMatrix * glm::inverse(transformMatrix);
+	clipSpaceToShadowMapMatrix = lightMatrix;
 }
 
 ShadowScene::~ShadowScene()
@@ -57,13 +55,17 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 
 	// Create triangles
 	const uint32_t TRIANGLE_COUNT = 100;
-	glm::vec4 vertexPositions[TRIANGLE_COUNT * 3];
-	glm::vec3 vertexNormals[TRIANGLE_COUNT * 3];
+	glm::vec4 vertexPositions[TRIANGLE_COUNT * 3] /*= { 
+		{ 0.0f, 2.7f, 0.4f, 1.0f }, { -2.7f, -2.0f, 0.4f, 1.0f }, { 2.7f, -2.0f, 0.4f, 1.0f },
+		{ 0.0f, 4.0f, -1.1f, 1.0f }, { -4.0f, -2.0f, -1.1f, 1.0f }, { 4.0f, -2.0f, -1.1f, 1.0f } }*/;
+	glm::vec3 vertexNormals[TRIANGLE_COUNT * 3] /*= {
+		{ 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f, -1.0f },
+		{ 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f, -1.0f } }*/;
 
 	mf::RandomGenerator randomGenerator;
-	//randomGenerator.seedGenerator();
-	randomGenerator.setSeed({ 2 });
-	mf::distributeTriangles(randomGenerator, 2.0f, TRIANGLE_COUNT, glm::vec2(0.2f, 0.3f), vertexPositions, vertexNormals);
+	randomGenerator.seedGenerator();
+	//randomGenerator.setSeed({ 2 });
+	mf::distributeTriangles(randomGenerator, 2.0f, TRIANGLE_COUNT, glm::vec2(0.6f, 0.8f), vertexPositions, vertexNormals);
 
 	// Create vertex buffer
 	positionBuffer = new VertexBufferVulkan(handle, TRIANGLE_COUNT * 3 * sizeof(glm::vec4), VertexBufferVulkan::DATA_USAGE::STATIC);
@@ -436,4 +438,99 @@ void ShadowScene::createBuffers()
 	clipSpaceToShadowMapMatrixBuffer = new ConstantBufferVulkan(_renderHandle);
 	clipSpaceToShadowMapMatrixBuffer->setUseCustomDescriptor(true);
 	clipSpaceToShadowMapMatrixBuffer->setData(&clipSpaceToShadowMapMatrix, sizeof(glm::mat4), 1);
+}
+
+glm::mat4 ShadowScene::rotationMatrix(float angle, glm::vec3 const& axis)
+{
+	float x;
+	float y;
+	float z;
+
+	glm::vec3 normalized = glm::normalize(axis);
+	x = normalized[0];
+	y = normalized[1];
+	z = normalized[2];
+
+
+	const float c = cosf(angle);
+	const float _1_c = 1.0f - c;
+	const float s = sinf(angle);
+
+	glm::mat4 rotation = {
+		x * x * _1_c + c,
+		y * x * _1_c - z * s,
+		z * x * _1_c + y * s,
+		0.0f,
+
+		x * y * _1_c + z * s,
+		y * y * _1_c + c,
+		z * y * _1_c - x * s,
+		0.0f,
+
+		x * z * _1_c - y * s,
+		y * z * _1_c + x * s,
+		z * z * _1_c + c,
+		0.0f,
+
+		0.0f,
+		0.0f,
+		0.0f,
+		1.0f
+	};
+
+	return rotation;
+}
+
+glm::mat4 ShadowScene::orthographicMatrix(float left, float right, float bottom, float top, float near, float far)
+{
+	glm::mat4 orthographic = {
+		2.0f / (right - left),
+		0.0f,
+		0.0f,
+		0.0f,
+
+		0.0f,
+		2.0f / (bottom - top),
+		0.0f,
+		0.0f,
+
+		0.0f,
+		0.0f,
+		1.0f / (near - far),
+		0.0f,
+
+		-(right + left) / (right - left),
+		-(bottom + top) / (bottom - top),
+		near / (near - far),
+		1.0f
+	};
+	return orthographic;
+}
+
+glm::mat4 ShadowScene::perspectiveMatrix(float aspectRatio, float fov, float near, float far)
+{
+	float f = 1.0f / tan(0.5f * fov);
+
+	glm::mat4 perspective = {
+		f / aspectRatio,
+		0.0f,
+		0.0f,
+		0.0f,
+
+		0.0f,
+		-f,
+		0.0f,
+		0.0f,
+
+		0.0f,
+		0.0f,
+		far / (near - far),
+		-1.0f,
+
+		0.0f,
+		0.0f,
+		(near * far) / (near - far),
+		0.0f
+	};
+	return perspective;
 }
