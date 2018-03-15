@@ -5,6 +5,7 @@
 
 # Custom
 
+!VulkanProject/VulkanProject/resource/*
 
 # User-specific files
 *.suo
