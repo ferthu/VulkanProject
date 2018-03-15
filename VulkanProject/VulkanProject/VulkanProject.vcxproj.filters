@@ -54,6 +54,9 @@
     <ClCompile Include="src\Scenes\ComputeExperiment.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Stuff\ImplementationTmp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\VulkanRenderer.h">
@@ -86,9 +89,6 @@
     <ClInclude Include="include\Scenes\TriangleScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\UsefulFuncs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\Stuff\RandomGenerator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -99,6 +99,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Scenes\ComputeExperiment.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Stuff\UsefulFuncs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Stuff\ObjReaderSimple.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -4,8 +4,8 @@
 #include "VulkanConstruct.h"
 #include <iostream>
 
-ComputeExperiment::ComputeExperiment(Mode mode, ShaderMode shader, uint32_t num_particles)
-	: mode(mode), shaderMode(shader), NUM_PARTICLE(num_particles)
+ComputeExperiment::ComputeExperiment(Mode mode, uint32_t shader, uint32_t num_particles, float locality)
+	: mode(mode), shaderMode(shader), NUM_PARTICLE(num_particles), locality(locality)
 {
 }
 
@@ -18,17 +18,17 @@ ComputeExperiment::~ComputeExperiment()
 
 	delete techniquePost, delete techniqueSmallOp;
 	delete compShader, delete compSmallOp;
-	delete smallOpBuf;
+	delete smallOpBuf, delete postParams;
 	smallOpLayout.destroy(_renderHandle->getDevice());
 	postLayout.destroy(_renderHandle->getDevice());
 
-	if (shaderMode == ShaderMode::MEM_LIMITED)
+	if (hasFlag(shaderMode, ShaderModeBit::MEM_LIMITED))
 	{
 		delete readImg;
 		delete readSampler;
 	}
 }
-#define COMPILE
+//#define COMPILE
 
 void ComputeExperiment::initialize(VulkanRenderer *handle)
 {
@@ -38,13 +38,15 @@ void ComputeExperiment::initialize(VulkanRenderer *handle)
 
 	// Render pass initiation
 	std::string err;
-#ifdef COMPILE
 	triShader = new ShaderVulkan("testShaders", _renderHandle);
+#ifdef COMPILE
 	triShader->setShader("resource/trishader/VertexShader.glsl", ShaderVulkan::ShaderType::VS);
 	triShader->setShader("resource/trishader/FragmentShader.glsl", ShaderVulkan::ShaderType::PS);
-	triShader->compileMaterial(err);
 #else
+	triShader->setShader("resource/tmp/VertexShader.spv", ShaderVulkan::ShaderType::VS);
+	triShader->setShader("resource/tmp/FragmentShader.spv", ShaderVulkan::ShaderType::PS);
 #endif
+	triShader->compileMaterial(err);
 
 
 	// Create testing vertex buffer
@@ -62,13 +64,15 @@ void ComputeExperiment::initialize(VulkanRenderer *handle)
 
 	//Layout
 	VkDescriptorSetLayoutBinding binding;
-	postLayout = vk::LayoutConstruct(shaderMode == ShaderMode::MEM_LIMITED ? 2 : 1);
+	postLayout = vk::LayoutConstruct(hasFlag(shaderMode, ShaderModeBit::MEM_LIMITED) ? 3 : 1);
 	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT);
 	postLayout[0] = createDescriptorLayout(_renderHandle->getDevice(), &binding, 1);
-	if (shaderMode == ShaderMode::MEM_LIMITED)
+	if (hasFlag(shaderMode, ShaderModeBit::MEM_LIMITED))
 	{
-		writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT);
+		writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT);
 		postLayout[1] = createDescriptorLayout(_renderHandle->getDevice(), &binding, 1);
+		writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT);
+		postLayout[2] = createDescriptorLayout(_renderHandle->getDevice(), &binding, 1);
 	}
 	// Gen. layout
 	postLayout.construct(_renderHandle->getDevice());
@@ -78,13 +82,13 @@ void ComputeExperiment::initialize(VulkanRenderer *handle)
 	compSmallOp = new ShaderVulkan("SmallOp", _renderHandle);
 #ifdef COMPILE
 	compSmallOp->setShader("resource/Compute/ComputeSimple.glsl", ShaderVulkan::ShaderType::CS);
-	if (shaderMode == ShaderMode::MEM_LIMITED)
+	if (hasFlag(shaderMode, ShaderModeBit::MEM_LIMITED))
 		compShader->setShader("resource/Compute/ComputeMemLimited.glsl", ShaderVulkan::ShaderType::CS);
 	else
 		compShader->setShader("resource/Compute/ComputeRegLimited.glsl", ShaderVulkan::ShaderType::CS);
 #else
 	compSmallOp->setShader("resource/tmp/ComputeSimple.spv", ShaderVulkan::ShaderType::CS);
-	if (shaderMode == ShaderMode::MEM_LIMITED)
+	if (hasFlag(shaderMode, ShaderModeBit::MEM_LIMITED))
 		compShader->setShader("resource/tmp/ComputeMemLimited.spv", ShaderVulkan::ShaderType::CS);
 	else
 		compShader->setShader("resource/tmp/ComputeRegLimited.spv", ShaderVulkan::ShaderType::CS);
@@ -93,7 +97,7 @@ void ComputeExperiment::initialize(VulkanRenderer *handle)
 	compSmallOp->compileMaterial(err);
 
 	// Image
-	if (shaderMode == ShaderMode::MEM_LIMITED)
+	if (hasFlag(shaderMode, ShaderModeBit::MEM_LIMITED))
 	{
 		readSampler = new Sampler2DVulkan(_renderHandle);
 		readSampler->setWrap(VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT, VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT);
@@ -101,7 +105,7 @@ void ComputeExperiment::initialize(VulkanRenderer *handle)
 		readSampler->setMinFilter(VkFilter::VK_FILTER_NEAREST);
 		readImg = new Texture2DVulkan(_renderHandle, readSampler);
 		readImg->loadFromFile("resource/fatboy.png");
-		readImg->attachBindPoint(1, postLayout[1]);
+		readImg->attachBindPoint(2, postLayout[2]);
 	}
 	// Framebuf targets
 	swapChainImgDesc.resize(_renderHandle->getSwapChainLength());
@@ -141,6 +145,8 @@ void ComputeExperiment::makeTechnique()
 		arr.get()[i] = { 0, glm::vec2(cos(i), sin(i)), glm::vec2(-cos(i), -sin(i)) };
 	smallOpBuf = new ConstantBufferVulkan(_renderHandle);
 	smallOpBuf->setData(arr.get(), sizeof(Particle) * NUM_PARTICLE, 0, smallOpLayout[0], VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+	postParams = new ConstantDoubleBufferVulkan(_renderHandle);
+	postParams->setData(&locality, sizeof(float), 1, postLayout[1], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 	// Gen. technique
 	techniqueSmallOp = new TechniqueVulkan(_renderHandle, compSmallOp, smallOpLayout._layout);
 
@@ -163,10 +169,19 @@ void ComputeExperiment::makeTechnique()
 		defineVertexBufferBindings(vertexBufferBindings, NUM_BUFFER, vertexAttributes, NUM_ATTRI);
 	//techniqueA = new TechniqueVulkan(_renderHandle, triShader, _renderHandle->getFramePass(), _renderHandle->getFramePassLayout(), vertexBindings);
 }
+void ComputeExperiment::transfer()
+{
+	static float counter = 0;
+	if (hasFlag(shaderMode, ShaderModeBit::MEM_LIMITED_ANIMATED))
+	{
+		counter += 0.00025f;
+		float value = locality + std::pow(2.7, std::sin(counter) * 4);
+		postParams->transferData(&value, sizeof(float), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+	}
+}
 
 void ComputeExperiment::frame()
 {
-
 	// Main render pass
 	VulkanRenderer::FrameInfo info = _renderHandle->beginFramePass();
 	vkCmdSetViewport(info._buf, 0, 1, &_renderHandle->getViewport());
@@ -192,16 +207,19 @@ void ComputeExperiment::frame()
 	techniquePost->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	// Bind resources
 	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
-	if(shaderMode == ShaderMode::MEM_LIMITED)
-		readImg->bind(info._buf, 1, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
+	if (hasFlag(shaderMode, ShaderModeBit::MEM_LIMITED))
+	{
+		postParams->bind(info._buf, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
+		readImg->bind(info._buf, 2, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
+	}
 	// Dispatch
 	uint32_t dimX = _renderHandle->getWidth() / 16;
 	uint32_t dimY = _renderHandle->getHeight() / 16;
 	if (mode == Mode::MULTI_DISPATCH)
 	{
-		for (int y = 0; y < _renderHandle->getHeight() / (16 * 8); y++)
+		for (uint32_t y = 0; y < _renderHandle->getHeight() / (16 * 8); y++)
 		{
-			for (int x = 0; x < _renderHandle->getWidth() / (16 * 8); x++)
+			for (uint32_t x = 0; x < _renderHandle->getWidth() / (16 * 8); x++)
 				vkCmdDispatch(info._buf, 8, 8, 1);
 		}
 	}
@@ -223,7 +241,7 @@ void ComputeExperiment::frame()
 
 	if (mode == Mode::MULTI_DISPATCH)
 	{
-		for (int i = 0; i < NUM_PARTICLE / (256 * 64); i++)
+		for (uint32_t i = 0; i < NUM_PARTICLE / (256 * 64); i++)
 			vkCmdDispatch(info._buf, 64, 1, 1);
 	}
 	else
@@ -239,7 +257,6 @@ void ComputeExperiment::frame()
 		transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
 		_renderHandle->submitCompute(0, true);
 	}
-
 	
 	_renderHandle->present();
 }

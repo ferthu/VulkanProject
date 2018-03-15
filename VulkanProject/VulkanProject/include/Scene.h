@@ -17,7 +17,7 @@ public:
 
 	virtual void initialize(VulkanRenderer *handle) { _renderHandle = handle; };
 	virtual void frame() = 0;
-
+	virtual void transfer() = 0;
 
 	virtual ~Scene() {};
 };

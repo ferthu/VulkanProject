@@ -229,6 +229,11 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	vkUpdateDescriptorSets(_renderHandle->getDevice(), 3, &renderPassInfoWrites[0], 0, nullptr);
 }
 
+void ShadowScene::transfer()
+{
+
+}
+
 void ShadowScene::frame()
 {
 	VulkanRenderer::FrameInfo info = _renderHandle->beginCommandBuffer();

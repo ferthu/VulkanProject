@@ -491,7 +491,7 @@ void VulkanRenderer::beginRenderPass(VkCommandBuffer cmdBuf, VkFramebuffer* fram
 	clearValues[1].depthStencil = { 1.0f, 0 };
 
 	// Set clear value for any additional attatchments to a depth stencil clear value
-	for (int i = 2; i < NUM_FRAME_ATTACH; ++i)
+	for (uint32_t i = 2; i < NUM_FRAME_ATTACH; ++i)
 		clearValues[i].depthStencil = { 1.0f, 0 };
 
 	renderPassInfo.clearValueCount = NUM_FRAME_ATTACH;
@@ -563,7 +563,7 @@ void VulkanRenderer::submitCompute(uint32_t computeQueueIndex, bool syncPrevious
 	if (syncPrevious && waitQueueLen > 0)
 	{
 		waitSemaphores[waitLen++] = waitQueue[waitQueueLen - 1];
-		waitQueue[waitQueueLen - 1] = computeFinished[computeQueueIndex];
+		waitQueue[waitQueueLen - 1] = computeFinished[computeQueueIndex]; // Wait prev. compute queue
 	}
 	else
 		waitQueue[waitQueueLen++] = computeFinished[computeQueueIndex];
@@ -588,6 +588,7 @@ void VulkanRenderer::submitCompute(uint32_t computeQueueIndex, bool syncPrevious
 
 void VulkanRenderer::frame()
 {
+	scene->transfer();
 	// Submit new transfer commands
 	endSingleCommand(device, queues[QueueType::MEM].queue, _transferCmd[getTransferIndex()], _transferFences[getTransferIndex()]);
 	// Wait for previous transfer frame to complete before using it for rendering! 

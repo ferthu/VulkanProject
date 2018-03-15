@@ -7,6 +7,9 @@
 #include "Scenes/ComputeScene.h"
 #include "Scenes/ComputeExperiment.h"
 #include "Scenes/ShadowScene.h"
+
+#define OBJ_READER_SIMPLE
+#include "Stuff/ObjReaderSimple.h"
 #undef main
 
 void updateWinTitle(VulkanRenderer *rend);
@@ -14,13 +17,18 @@ void updateWinTitle(VulkanRenderer *rend);
 
 int main(int argc, const char* argv)
 {
+	SimpleMesh mesh, baked;
+	if (readObj("resource/Suzanne.obj", mesh))
+		std::cout << "Obj read successfull\n";
+	mesh.bake(SimpleMesh::BitFlag::NORMAL_BIT, baked);
+
 	VulkanRenderer renderer;
 
-	//renderer.initialize( new ComputeExperiment(ComputeExperiment::Mode::ASYNC, ComputeExperiment::ShaderMode::REG_LIMITED), 1024, 1024, TRIPLE_BUFFERED); // 256, 256
+	//renderer.initialize( new ComputeExperiment(ComputeExperiment::Mode::MULTI_QUEUE, ComputeExperiment::MEM_LIMITED, 1024 * 512, 2), 1024, 1024, TRIPLE_BUFFERED); // 256, 256
 	//renderer.initialize(new ComputeScene(ComputeScene::Mode::Blur), 512, 512, TRIPLE_BUFFERED);
 	//renderer.initialize(new TriangleScene(), 512, 512, 0);
-	//glm::perspective(80.0f, 800.0f / 600.0f, 0.1f, 10.0f);
 	renderer.initialize(new ShadowScene(), 1024, 1024, 0);
+
 
 	SDL_Event windowEvent;
 	while (true)

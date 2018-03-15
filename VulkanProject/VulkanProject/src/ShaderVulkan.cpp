@@ -6,7 +6,7 @@
 #include <locale>
 #include <codecvt>
 #include "VulkanConstruct.h"
-#include "UsefulFuncs.h"
+#include "Stuff/UsefulFuncs.h"
 
 
 ShaderVulkan::ShaderVulkan(const std::string & name, VulkanRenderer *renderHandle)
