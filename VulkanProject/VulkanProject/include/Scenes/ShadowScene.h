@@ -26,6 +26,10 @@ public:
 	void defineShadowRenderPass(VkDevice device);
 
 private:
+	glm::mat4 rotationMatrix(float angle, glm::vec3 const& axis);
+	glm::mat4 orthographicMatrix(float left, float right, float bottom, float top, float near, float far);
+	glm::mat4 perspectiveMatrix(float aspectRatio, float fov, float near, float far);
+
 	void createBuffers();
 
 	const uint32_t shadowMappingMatrixBindingSlot = 0;

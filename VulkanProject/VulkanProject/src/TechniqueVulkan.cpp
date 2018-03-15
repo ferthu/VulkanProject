@@ -55,11 +55,11 @@ void TechniqueVulkan::createGraphicsPipeline(VkPipelineLayout layout, VkPipeline
 		defineViewportState(&viewport, &scissor);
 
 	// Rasterization state
-	int rasterFlag = 0;
+	int rasterFlag = DEPTH_CLAMP_BIT;
 	//if (rState->getWireframe())
 	//	rasterFlag |= WIREFRAME_BIT;
 	VkPipelineRasterizationStateCreateInfo pipelineRasterizationStateCreateInfo =
-		defineRasterizationState(rasterFlag, VK_CULL_MODE_BACK_BIT);
+		defineRasterizationState(rasterFlag, /*VK_CULL_MODE_BACK_BIT*/ VK_CULL_MODE_NONE);
 
 	// Multisampling
 	VkPipelineMultisampleStateCreateInfo pipelineMultisampleStateCreateInfo =
@@ -76,14 +76,14 @@ void TechniqueVulkan::createGraphicsPipeline(VkPipelineLayout layout, VkPipeline
 	VkPipelineDepthStencilStateCreateInfo depthStencil =
 		defineDepthState();
 
-	VkDynamicState viewportDynamicState = VkDynamicState::VK_DYNAMIC_STATE_VIEWPORT;
+	VkDynamicState viewportDynamicState[1] = { VkDynamicState::VK_DYNAMIC_STATE_VIEWPORT };
 
 	VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {};
 	dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamicStateCreateInfo.pNext = nullptr;
 	dynamicStateCreateInfo.flags = 0;
 	dynamicStateCreateInfo.dynamicStateCount = 1;
-	dynamicStateCreateInfo.pDynamicStates = &viewportDynamicState;
+	dynamicStateCreateInfo.pDynamicStates = viewportDynamicState;
 
 	VkGraphicsPipelineCreateInfo pipelineInfo = {};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;

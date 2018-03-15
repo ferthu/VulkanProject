@@ -172,6 +172,8 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	// Features
 	VkPhysicalDeviceFeatures deviceFeatures = {};
 	deviceFeatures.fillModeNonSolid = true;
+	deviceFeatures.depthClamp = true;
+	deviceFeatures.depthBiasClamp = true;
 	deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
 
 	// Create (vulkan) device

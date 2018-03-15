@@ -27,8 +27,8 @@ int main(int argc, const char* argv)
 	renderer.initialize(new ComputeExperiment(ComputeExperiment::Mode::SEQUENTIAL, ComputeExperiment::MEM_LIMITED, 1024 * 1024, 8), 1024, 1024, TRIPLE_BUFFERED); // 256, 256
 	//renderer.initialize(new ComputeScene(ComputeScene::Mode::Blur), 512, 512, TRIPLE_BUFFERED);
 	//renderer.initialize(new TriangleScene(), 512, 512, 0);
-	//glm::perspective(80.0f, 800.0f / 600.0f, 0.1f, 10.0f);
-	//renderer.initialize(new ShadowScene(), 800, 600, 0);
+	//renderer.initialize(new ShadowScene(), 1024, 1024, 0);
+
 
 	SDL_Event windowEvent;
 	while (true)
