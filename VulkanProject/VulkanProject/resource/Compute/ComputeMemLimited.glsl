@@ -8,7 +8,7 @@ layout(set=1, binding = 0) uniform UniformBufferObject
 layout(set=2, binding=0) uniform sampler2D myTex;
 
 const int TOT_REG = 53; // Roughly it seems they are aligned.
-const int N = TOT_REG - 11;
+const int N = TOT_REG - 13;
 float arr[N];
 
 void main() {
