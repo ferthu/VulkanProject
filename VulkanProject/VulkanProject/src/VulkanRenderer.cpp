@@ -586,6 +586,7 @@ void VulkanRenderer::submitCompute(uint32_t computeQueueIndex, bool syncPrevious
 
 void VulkanRenderer::frame()
 {
+	scene->transfer();
 	// Submit new transfer commands
 	endSingleCommand(device, queues[QueueType::MEM].queue, _transferCmd[getTransferIndex()], _transferFences[getTransferIndex()]);
 	// Wait for previous transfer frame to complete before using it for rendering! 

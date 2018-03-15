@@ -173,6 +173,11 @@ void ComputeScene::postBlur(VulkanRenderer::FrameInfo info)
 	vkCmdDispatch(info._buf, 1, 512, 1);
 }
 
+void ComputeScene::transfer()
+{
+
+}
+
 void ComputeScene::frame()
 {
 	mainPass();

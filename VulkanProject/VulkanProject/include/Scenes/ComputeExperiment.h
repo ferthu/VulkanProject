@@ -22,23 +22,25 @@ public:
 		MULTI_DISPATCH
 	};
 
-	enum ShaderMode
+	enum ShaderModeBit
 	{
-		MEM_LIMITED,
-		REG_LIMITED
+		MEM_LIMITED = 1,
+		MEM_LIMITED_ANIMATED = 2,
+		REG_LIMITED = 4
 	};
 	
-	ComputeExperiment(Mode mode = ASYNC, ShaderMode shader = REG_LIMITED, uint32_t num_particles = 1024 * 512);
+	ComputeExperiment(Mode mode = ASYNC, uint32_t shader = REG_LIMITED, uint32_t num_particles = 1024 * 512);
 	~ComputeExperiment();
 
 	virtual void frame();
+	virtual void transfer();
 	virtual void initialize(VulkanRenderer *handle);
 	virtual void defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout);
 	virtual VkRenderPass defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat, std::vector<VkImageView>& additionalAttatchments);
 
 private:
 	Mode mode;
-	ShaderMode shaderMode;
+	uint32_t shaderMode;
 	uint32_t NUM_PARTICLE;
 
 	void makeTechnique();
@@ -54,6 +56,7 @@ private:
 	vk::LayoutConstruct postLayout, smallOpLayout;
 	ShaderVulkan *compShader, *compSmallOp;
 	ConstantBufferVulkan *smallOpBuf;
+	ConstantDoubleBufferVulkan *postParams;
 	
 	Sampler2DVulkan *readSampler;
 	Texture2DVulkan *readImg;

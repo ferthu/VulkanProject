@@ -39,22 +39,23 @@ private:
 class ConstantDoubleBufferVulkan
 {
 public:
-	ConstantDoubleBufferVulkan(VulkanRenderer *renderHandle, std::string NAME, unsigned int location);
+	ConstantDoubleBufferVulkan(VulkanRenderer *renderHandle);
 	virtual ~ConstantDoubleBufferVulkan();
-	void setData(const void* data, size_t size, unsigned int location);
+	void setData(const void * data, size_t byteSize, uint32_t setBindIndex, VkDescriptorSetLayout layout, VkBufferUsageFlags usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+	void transferData(const void* data, size_t byteSize, VkBufferUsageFlags usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 	void bind(VkCommandBuffer cmdBuf, VkPipelineLayout layout, VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS);
 
 private:
 	// Double buffered:
+
 
 	VkDescriptorSet descriptor[2];
 	VkBuffer buffer[2];
 
 	VulkanRenderer* _renderHandle;
 
-	std::string name;
 	uint32_t location;
-	size_t poolOffset, memSize;
+	size_t poolOffset, memSize, bufSize;
 
 };
 

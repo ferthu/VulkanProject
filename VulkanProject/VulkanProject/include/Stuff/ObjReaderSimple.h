@@ -105,14 +105,14 @@ void SimpleMesh::append(SimpleMesh& other)
 	_uv.reserve(_uv.size() + other._uv.size());
 	_edges.reserve(_edges.size() + other._edges.size());
 	// Copy indices
-	int offset = _position.size() / 3;
-	for (int i = 0; i < other._face_ind.size(); i++) _face_ind.push_back(other._face_ind[i] + offset);
+	size_t offset = _position.size() / 3;
+	for (size_t i = 0; i < other._face_ind.size(); i++) _face_ind.push_back(other._face_ind[i] + offset);
 	offset = _normal.size() / 3;
-	for (int i = 0; i < other._face_nor.size(); i++) _face_nor.push_back(other._face_nor[i] + offset);
+	for (size_t i = 0; i < other._face_nor.size(); i++) _face_nor.push_back(other._face_nor[i] + offset);
 	offset = _uv.size() / 3;
-	for (int i = 0; i < other._face_uv.size(); i++) _face_uv.push_back(other._face_uv[i] + offset);
+	for (size_t i = 0; i < other._face_uv.size(); i++) _face_uv.push_back(other._face_uv[i] + offset);
 	offset = _edges.size() / 3;
-	for (int i = 0; i < other._edges.size(); i++) _edges.push_back(other._edges[i] + offset);
+	for (size_t i = 0; i < other._edges.size(); i++) _edges.push_back(other._edges[i] + offset);
 	// Copy vertices
 	for (int i = 0; i < other._position.size(); i++) _position.push_back(other._position[i]);
 	for (int i = 0; i < other._normal.size(); i++) _normal.push_back(other._normal[i]);

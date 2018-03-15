@@ -62,6 +62,10 @@ void TriangleScene::makeTechnique()
 	techniqueA = new TechniqueVulkan(_renderHandle, triShader, _renderHandle->getFramePass(), _renderHandle->getFramePassLayout(), vertexBindings);
 }
 
+void TriangleScene::transfer()
+{
+
+}
 void TriangleScene::frame()
 {
 	VulkanRenderer::FrameInfo info = _renderHandle->beginFramePass();
