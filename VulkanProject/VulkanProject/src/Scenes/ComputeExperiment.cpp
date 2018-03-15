@@ -4,8 +4,8 @@
 #include "VulkanConstruct.h"
 #include <iostream>
 
-ComputeExperiment::ComputeExperiment(Mode mode, uint32_t shader, uint32_t num_particles)
-	: mode(mode), shaderMode(shader), NUM_PARTICLE(num_particles)
+ComputeExperiment::ComputeExperiment(Mode mode, uint32_t shader, uint32_t num_particles, float locality)
+	: mode(mode), shaderMode(shader), NUM_PARTICLE(num_particles), locality(locality)
 {
 }
 
@@ -28,7 +28,7 @@ ComputeExperiment::~ComputeExperiment()
 		delete readSampler;
 	}
 }
-#define COMPILE
+//#define COMPILE
 
 void ComputeExperiment::initialize(VulkanRenderer *handle)
 {
@@ -146,8 +146,7 @@ void ComputeExperiment::makeTechnique()
 	smallOpBuf = new ConstantBufferVulkan(_renderHandle);
 	smallOpBuf->setData(arr.get(), sizeof(Particle) * NUM_PARTICLE, 0, smallOpLayout[0], VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 	postParams = new ConstantDoubleBufferVulkan(_renderHandle);
-	float t = 8;
-	postParams->setData(&t, sizeof(float), 1, postLayout[1], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+	postParams->setData(&locality, sizeof(float), 1, postLayout[1], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 	// Gen. technique
 	techniqueSmallOp = new TechniqueVulkan(_renderHandle, compSmallOp, smallOpLayout._layout);
 
@@ -176,7 +175,7 @@ void ComputeExperiment::transfer()
 	if (hasFlag(shaderMode, ShaderModeBit::MEM_LIMITED_ANIMATED))
 	{
 		counter += 0.00025f;
-		float value = 4 + std::pow(2.7, std::sin(counter) * 4);
+		float value = locality + std::pow(2.7, std::sin(counter) * 4);
 		postParams->transferData(&value, sizeof(float), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 	}
 }

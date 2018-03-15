@@ -29,7 +29,7 @@ public:
 		REG_LIMITED = 4
 	};
 	
-	ComputeExperiment(Mode mode = ASYNC, uint32_t shader = REG_LIMITED, uint32_t num_particles = 1024 * 512);
+	ComputeExperiment(Mode mode = ASYNC, uint32_t shader = REG_LIMITED, uint32_t num_particles = 1024 * 512, float locality = 8);
 	~ComputeExperiment();
 
 	virtual void frame();
@@ -42,6 +42,7 @@ private:
 	Mode mode;
 	uint32_t shaderMode;
 	uint32_t NUM_PARTICLE;
+	float locality;
 
 	void makeTechnique();
 
