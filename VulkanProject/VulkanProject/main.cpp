@@ -21,19 +21,21 @@ static std::vector<double>	perfCounter;
 static double elapsedTime = 0.0;
 static double lastElapsedTime = 0.0;
 const double INIT_WAIT_TIMER = 100;
-const int MIN_SAMPLES = 1000;
+const int MIN_SAMPLES = 0;
 const double RUN_DURATION = INIT_WAIT_TIMER + 1000.f; //ms
 
+inline double square(double val) { return val * val; }
+inline uint32_t square(uint32_t val) { return val * val; }
 
 int main(int argc, const char* argv)
 {
 	VulkanRenderer renderer;
 	perfCounter.reserve(10000);
-	uint32_t particles = 512 * 1024;
+	uint32_t particles = 1024 * 1024;
 	uint32_t dimW = 1024, dimH = 1024, pixels = dimW * dimH;
 	std::stringstream outString;
 	outString << "ASYNC" << ", " << pixels << ", " << particles;
-	renderer.initialize( new ComputeExperiment(ComputeExperiment::Mode::ASYNC, ComputeExperiment::MEM_LIMITED, particles), dimW, dimH, TRIPLE_BUFFERED); // 256, 256
+	renderer.initialize( new ComputeExperiment(ComputeExperiment::Mode::MULTI_QUEUE, ComputeExperiment::REG_LIMITED, particles), dimW, dimH, TRIPLE_BUFFERED); // 256, 256
 	//renderer.initialize(new ComputeScene(ComputeScene::Mode::Blur), 512, 512, TRIPLE_BUFFERED);
 	//renderer.initialize(new TriangleScene(), 512, 512, 0);
 	//renderer.initialize(new ShadowScene(), 800, 600, 0);

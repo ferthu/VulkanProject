@@ -18,12 +18,13 @@ ComputeExperiment::~ComputeExperiment()
 
 	delete techniquePost, delete techniqueSmallOp;
 	delete compShader, delete compSmallOp;
-	delete smallOpBuf, delete postParams;
+	delete smallOpBuf;
 	smallOpLayout.destroy(_renderHandle->getDevice());
 	postLayout.destroy(_renderHandle->getDevice());
 
 	if (hasFlag(shaderMode, ShaderModeBit::MEM_LIMITED))
 	{
+		delete postParams;
 		delete readImg;
 		delete readSampler;
 	}
@@ -145,8 +146,12 @@ void ComputeExperiment::makeTechnique()
 		arr.get()[i] = { 0, glm::vec2(cos(i), sin(i)), glm::vec2(-cos(i), -sin(i)) };
 	smallOpBuf = new ConstantBufferVulkan(_renderHandle);
 	smallOpBuf->setData(arr.get(), sizeof(Particle) * NUM_PARTICLE, 0, smallOpLayout[0], VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-	postParams = new ConstantDoubleBufferVulkan(_renderHandle);
-	postParams->setData(&locality, sizeof(float), 1, postLayout[1], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+
+	if (hasFlag(shaderMode, ShaderModeBit::MEM_LIMITED))
+	{
+		postParams = new ConstantDoubleBufferVulkan(_renderHandle);
+		postParams->setData(&locality, sizeof(float), 1, postLayout[1], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+	}
 	// Gen. technique
 	techniqueSmallOp = new TechniqueVulkan(_renderHandle, compSmallOp, smallOpLayout._layout);
 
