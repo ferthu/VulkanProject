@@ -9,14 +9,7 @@
 
 ShadowScene::ShadowScene()
 {
-	glm::mat4 lightMatrix = glm::mat4(1.0f);
-	lightMatrix = rotationMatrix(glm::pi<float>() * 0.0f, glm::vec3(0, 1, 0)) * lightMatrix;
-	lightMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -4.0f)) * lightMatrix;
-	lightMatrix = orthographicMatrix(-4.0f, 4.0f, -4.0f, 4.0f, 0.1f, 10.0f) * lightMatrix;
 
-	createCameraMatrix(0.0f);
-	shadowMappingMatrix = lightMatrix;
-	lightInfo.clipSpaceToShadowMapMatrix = lightMatrix;
 }
 
 ShadowScene::~ShadowScene()
@@ -54,7 +47,14 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 {
 	Scene::initialize(handle);
 
+	glm::mat4 lightMatrix = glm::mat4(1.0f);
+	lightMatrix = rotationMatrix(glm::pi<float>() * 0.0f, glm::vec3(0, 1, 0)) * lightMatrix;
+	lightMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -4.0f)) * lightMatrix;
+	lightMatrix = orthographicMatrix(-4.0f, 4.0f, -4.0f, 4.0f, 0.1f, 10.0f) * lightMatrix;
 
+	createCameraMatrix(0.0f);
+	shadowMappingMatrix = lightMatrix;
+	lightInfo.clipSpaceToShadowMapMatrix = lightMatrix;
 
 	// Create vertex buffer
 	if (false)
@@ -328,6 +328,10 @@ void ShadowScene::frame(float dt)
 
 	vkCmdBindPipeline(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, depthPassTechnique->pipeline);
 	vkCmdSetViewport(info._buf, 0, 1, &shadowMapViewport);
+	VkRect2D scissor;
+	scissor.offset = { 0, 0 };
+	scissor.extent = { shadowMapSize, shadowMapSize };
+	vkCmdSetScissor(info._buf, 0, 1, &scissor);
 	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayoutConstruct._layout, 0, 1, &shadowPassDescriptorSet, 0, nullptr);
 
 	positionBufferBinding.bind(info._buf, 0);
@@ -343,6 +347,8 @@ void ShadowScene::frame(float dt)
 	vkCmdBindPipeline(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, renderPassTechnique->pipeline);
 	VkViewport normalViewport = _renderHandle->getViewport();
 	vkCmdSetViewport(info._buf, 0, 1, &normalViewport);
+	scissor.extent = { _renderHandle->getWidth(), _renderHandle->getHeight() };
+	vkCmdSetScissor(info._buf, 0, 1, &scissor);
 	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayoutConstruct._layout, 1, 1, &renderPassDescriptorSet, 0, nullptr);
 
 	vkCmdDraw(info._buf, positionBufferBinding.numElements, 1, 0, 0);
@@ -413,7 +419,7 @@ VkRenderPass ShadowScene::defineRenderPass(VkDevice device, VkFormat swapchainFo
 	shadowMapSampler = new Sampler2DVulkan(_renderHandle);
 	shadowMapSampler->setMinFilter(VkFilter::VK_FILTER_LINEAR);
 	shadowMapSampler->setMagFilter(VkFilter::VK_FILTER_LINEAR);
-	shadowMapSampler->setWrap(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+	//shadowMapSampler->setWrap(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
 
 	shadowMap = new Texture2DVulkan(_renderHandle, shadowMapSampler);
 	shadowMap->createShadowMap(shadowMapSize, shadowMapSize, shadowMapFormat);
@@ -631,7 +637,8 @@ void ShadowScene::createCameraMatrix(float time)
 	glm::mat4 cameraMatrix = glm::mat4(1.0f);
 	glm::mat4 rot = rotationMatrix(glm::pi<float>() * 0.2f * sinf(time), glm::vec3(.0f, 1.0f, .0f));
 	glm::mat4 tra = glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f * sinf(time), 0.5f * sinf(time * 0.1f), -4.0f));
-	glm::mat4 per = perspectiveMatrix(800.0f / 600.0f, 1.0f, 0.1f, 10.0f);
+	glm::mat4 per = perspectiveMatrix(static_cast<float>(_renderHandle->getWidth()) / static_cast<float>(_renderHandle->getHeight()), 
+		1.0f, 0.1f, 10.0f);
 	//glm::mat4 per = orthographicMatrix(-4.0f, 4.0f, -4.0f, 4.0f, 0.1f, 10.0f) * cameraMatrix;
 
 	transformMatrix = per * tra * rot * cameraMatrix;

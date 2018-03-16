@@ -26,6 +26,7 @@ VulkanRenderer::~VulkanRenderer() { }
 int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int height, uint32_t BIT_FLAGS)
 {
 	this->scene = scene;
+
 	swapchainExtent.height = height;
 	swapchainExtent.width = width;
 
@@ -35,6 +36,7 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	viewport.width = (float)width;
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
+
 
 	/* Create Vulkan instance
 	*/

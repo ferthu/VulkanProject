@@ -130,6 +130,8 @@ public:
 
 	VkDescriptorSetLayout getDescriptorSetLayout(uint32_t index);
 
+	vk::QueueConstruct queues;
+
 private:
 	Scene * scene;
 
@@ -186,9 +188,6 @@ private:
 	
 	VkBuffer stagingBuffer;			// Buffer to temporarily hold data being transferred to GPU
 
-	public:
-	vk::QueueConstruct queues;
-	private:
 	VkSurfaceFormatKHR swapchainFormat;
 	VkExtent2D swapchainExtent;
 

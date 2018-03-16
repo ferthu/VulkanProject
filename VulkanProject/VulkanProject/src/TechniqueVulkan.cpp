@@ -76,13 +76,14 @@ void TechniqueVulkan::createGraphicsPipeline(VkPipelineLayout layout, VkPipeline
 	VkPipelineDepthStencilStateCreateInfo depthStencil =
 		defineDepthState();
 
-	VkDynamicState viewportDynamicState[1] = { VkDynamicState::VK_DYNAMIC_STATE_VIEWPORT };
+	const unsigned DYNAMIC_STATE_COUNT = 2;
+	VkDynamicState viewportDynamicState[DYNAMIC_STATE_COUNT] = { VkDynamicState::VK_DYNAMIC_STATE_VIEWPORT, VkDynamicState::VK_DYNAMIC_STATE_SCISSOR };
 
 	VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {};
 	dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamicStateCreateInfo.pNext = nullptr;
 	dynamicStateCreateInfo.flags = 0;
-	dynamicStateCreateInfo.dynamicStateCount = 1;
+	dynamicStateCreateInfo.dynamicStateCount = DYNAMIC_STATE_COUNT;
 	dynamicStateCreateInfo.pDynamicStates = viewportDynamicState;
 
 	VkGraphicsPipelineCreateInfo pipelineInfo = {};
