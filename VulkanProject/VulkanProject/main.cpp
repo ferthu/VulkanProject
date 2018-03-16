@@ -21,21 +21,31 @@ static std::vector<double>	perfCounter;
 static double elapsedTime = 0.0;
 static double lastElapsedTime = 0.0;
 const double INIT_WAIT_TIMER = 100;
-const int MIN_SAMPLES = 0;								// = 0 if inf runtime
+const int MIN_SAMPLES = 1000;								// = 0 if inf runtime
 const double RUN_DURATION = INIT_WAIT_TIMER + 1000.f;	//ms
 
 inline double square(double val) { return val * val; }
 inline uint32_t square(uint32_t val) { return val * val; }
 
+const std::string MODE_STR[] = {
+	"ASYNC",
+	"SEQ",
+	"MQUEUE",
+	"MULTI_DISPATCH"
+};
+
 int main(int argc, const char* argv)
 {
 	VulkanRenderer renderer;
 	perfCounter.reserve(10000);
-	uint32_t particles = 1024 * 1024;
+	uint32_t particles = 1024*1024;
 	uint32_t dimW = 1024, dimH = 1024, pixels = dimW * dimH;
+	float locality = 8;
+	uint32_t mode = ComputeExperiment::Mode::SEQUENTIAL;
+	uint32_t shader = ComputeExperiment::MEM_LIMITED;
 	std::stringstream outString;
-	outString << "ASYNC" << ", " << pixels << ", " << particles;
-	renderer.initialize( new ComputeExperiment(ComputeExperiment::Mode::MULTI_QUEUE, ComputeExperiment::REG_LIMITED, particles), dimW, dimH, TRIPLE_BUFFERED); // 256, 256
+	outString << "MEM_" << MODE_STR[mode] << ", " << pixels << ", " << particles << ", " << locality;
+	renderer.initialize( new ComputeExperiment((ComputeExperiment::Mode)mode, shader, particles, locality), dimW, dimH, TRIPLE_BUFFERED); // 256, 256
 	//renderer.initialize(new ComputeScene(ComputeScene::Mode::Blur), 512, 512, TRIPLE_BUFFERED);
 	//renderer.initialize(new TriangleScene(), 512, 512, 0);
 	//renderer.initialize(new ShadowScene(), 800, 600, 0);
@@ -133,6 +143,19 @@ void outPerfCounters(std::string params)
 		double avg = mean(perfCounter);
 		double dev = stdev(perfCounter, avg);
 		stream << sum(perfCounter) << ", " << avg << ", " << dev << "\n";
+		stream.close();
+	}
+	stream.open("Metric.log", std::ios::trunc | std::ios::out);
+	if (stream.is_open())
+	{
+		double elapsed = 0;
+		stream << "#" << params << "\n";
+		stream << "#Elapsed	FrameTime\n";
+		for (size_t i = 0; i < perfCounter.size(); i++)
+		{
+			elapsed += perfCounter[i];
+			stream << elapsed << ", " << perfCounter[i] << "\n";
+		}
 		stream.close();
 	}
 }
