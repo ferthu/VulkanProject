@@ -80,14 +80,14 @@ void SimpleMesh::bake(unsigned int FLAG, SimpleMesh &bakeOutput)
 				pos.push_back(1);
 			if (NOR)
 			{
-				nor.push_back(_normal[indID._pInd*3]);
-				nor.push_back(_normal[indID._pInd*3+1]);
-				nor.push_back(_normal[indID._pInd*3+2]);
+				nor.push_back(_normal[indID._nInd*3]);
+				nor.push_back(_normal[indID._nInd *3+1]);
+				nor.push_back(_normal[indID._nInd *3+2]);
 			}
 			if (UV)
 			{
-				uv.push_back(_uv[indID._pInd*2]);
-				uv.push_back(_uv[indID._pInd*2+1]);
+				uv.push_back(_uv[indID._uvInd*2]);
+				uv.push_back(_uv[indID._uvInd *2+1]);
 			}
 		}
 		//Split objects
