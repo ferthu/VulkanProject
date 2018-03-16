@@ -14,7 +14,7 @@ public:
 	virtual ~TriangleScene();
 
 	virtual void transfer();
-	virtual void frame();
+	virtual void frame(float dt);
 	virtual void initialize(VulkanRenderer *handle);
 	virtual void defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout);
 	virtual VkRenderPass defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat, std::vector<VkImageView>& additionalAttatchments);

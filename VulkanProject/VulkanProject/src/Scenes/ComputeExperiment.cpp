@@ -180,7 +180,7 @@ void ComputeExperiment::transfer()
 	}
 }
 
-void ComputeExperiment::frame()
+void ComputeExperiment::frame(float dt)
 {
 	// Main render pass
 	VulkanRenderer::FrameInfo info = _renderHandle->beginFramePass();

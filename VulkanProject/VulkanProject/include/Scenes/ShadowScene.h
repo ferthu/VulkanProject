@@ -17,7 +17,7 @@ public:
 	ShadowScene();
 	virtual ~ShadowScene();
 
-	virtual void frame();
+	virtual void frame(float dt);
 	virtual void transfer();
 	virtual void initialize(VulkanRenderer* handle);
 
@@ -29,6 +29,8 @@ private:
 	glm::mat4 rotationMatrix(float angle, glm::vec3 const& axis);
 	glm::mat4 orthographicMatrix(float left, float right, float bottom, float top, float near, float far);
 	glm::mat4 perspectiveMatrix(float aspectRatio, float fov, float near, float far);
+	// Rotate the camera based on time
+	glm::mat4 createCameraMatrix(float time);
 
 	void createBuffers();
 

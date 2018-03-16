@@ -9,18 +9,12 @@
 
 ShadowScene::ShadowScene()
 {
-	glm::mat4 cameraMatrix = glm::mat4(1.0f);
-	cameraMatrix = rotationMatrix(glm::pi<float>() * 0.2f, glm::vec3(.0f, 1.0f, .0f)) * cameraMatrix;
-	cameraMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -4.0f)) * cameraMatrix;
-	cameraMatrix = perspectiveMatrix(800.0f / 600.0f, 1.f, 0.1f, 10.0f) * cameraMatrix;
-	//cameraMatrix = orthographicMatrix(-4.0f, 4.0f, -4.0f, 4.0f, 0.1f, 10.0f) * cameraMatrix;
-
 	glm::mat4 lightMatrix = glm::mat4(1.0f);
 	lightMatrix = rotationMatrix(glm::pi<float>() * 0.0f, glm::vec3(0, 1, 0)) * lightMatrix;
 	lightMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -4.0f)) * lightMatrix;
 	lightMatrix = orthographicMatrix(-4.0f, 4.0f, -4.0f, 4.0f, 0.1f, 10.0f) * lightMatrix;
 
-	this->transformMatrix = cameraMatrix;
+	this->transformMatrix = createCameraMatrix(0.0f);
 	shadowMappingMatrix = lightMatrix;
 	clipSpaceToShadowMapMatrix = lightMatrix;
 }
@@ -254,8 +248,16 @@ void ShadowScene::transfer()
 
 }
 
-void ShadowScene::frame()
+void ShadowScene::frame(float dt)
 {
+	static float counter = 0.0f;
+	counter += dt;
+	transformMatrix = createCameraMatrix(counter);
+
+	VkCommandBuffer cmdBuf = beginSingleCommand(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].pool);
+	transformMatrixBuffer->setData(&transformMatrix, sizeof(glm::mat4), 1);
+	endSingleCommand_Wait(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].queue, _renderHandle->queues[QueueType::MEM].pool, cmdBuf);
+
 	VulkanRenderer::FrameInfo info = _renderHandle->beginCommandBuffer();
 
 	// Shadow map pass
@@ -558,4 +560,14 @@ glm::mat4 ShadowScene::perspectiveMatrix(float aspectRatio, float fov, float nea
 		0.0f
 	};
 	return perspective;
+}
+
+glm::mat4 ShadowScene::createCameraMatrix(float time)
+{
+	glm::mat4 cameraMatrix = glm::mat4(1.0f);
+	cameraMatrix = rotationMatrix(glm::pi<float>() * 0.2f * sinf(time), glm::vec3(.0f, 1.0f, .0f)) * cameraMatrix;
+	cameraMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f * sinf(time), 0.5f * sinf(time * 0.1f), -4.0f)) * cameraMatrix;
+	cameraMatrix = perspectiveMatrix(800.0f / 600.0f, 1.0f, 0.1f, 10.0f) * cameraMatrix;
+	//cameraMatrix = orthographicMatrix(-4.0f, 4.0f, -4.0f, 4.0f, 0.1f, 10.0f) * cameraMatrix;
+	return cameraMatrix;
 }

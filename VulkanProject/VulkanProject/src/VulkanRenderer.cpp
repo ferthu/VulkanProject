@@ -586,7 +586,7 @@ void VulkanRenderer::submitCompute(uint32_t computeQueueIndex, bool syncPrevious
 }
 
 
-void VulkanRenderer::frame()
+void VulkanRenderer::frame(float dt)
 {
 	scene->transfer();
 	// Submit new transfer commands
@@ -597,15 +597,9 @@ void VulkanRenderer::frame()
 	// Start rendering
 	vkAcquireNextImageKHR(device, swapchain, std::numeric_limits<uint64_t>::max(), imageAvailable, VK_NULL_HANDLE, &swapChainImgIndex);
 
-
-
 	// Draw stuff..?:)
-	scene->frame();
-
-
+	scene->frame(dt);
 }
-
-
 #pragma endregion
 
 
@@ -689,8 +683,9 @@ void VulkanRenderer::transferBufferData(VkBuffer buffer, const void* data, size_
 	bufferCopyRegion.dstOffset = offset;
 	bufferCopyRegion.size = size;
 
-	vkCmdCopyBuffer(_transferCmd[getTransferIndex()], stagingBuffer, buffer, 1, &bufferCopyRegion);
-	
+	VkCommandBuffer cmdBuf = beginSingleCommand(device, queues[QueueType::MEM].pool);
+	vkCmdCopyBuffer(cmdBuf, stagingBuffer, buffer, 1, &bufferCopyRegion);
+	endSingleCommand_Wait(getDevice(), queues[QueueType::MEM].queue, queues[QueueType::MEM].pool, cmdBuf);
 }
 
 void VulkanRenderer::transferBufferInitial(VkBuffer buffer, const void* data, size_t size, size_t offset)

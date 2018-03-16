@@ -178,7 +178,7 @@ void ComputeScene::transfer()
 
 }
 
-void ComputeScene::frame()
+void ComputeScene::frame(float dt)
 {
 	mainPass();
 	VulkanRenderer::FrameInfo info = _renderHandle->beginCompute();

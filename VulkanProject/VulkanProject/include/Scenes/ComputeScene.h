@@ -22,7 +22,7 @@ public:
 	ComputeScene(Mode mode = Sequential);
 	~ComputeScene();
 
-	virtual void frame();
+	virtual void frame(float dt);
 	virtual void transfer();
 	virtual void initialize(VulkanRenderer *handle);
 	virtual void defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout);

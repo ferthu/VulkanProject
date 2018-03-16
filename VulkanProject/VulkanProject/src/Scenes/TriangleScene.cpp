@@ -66,7 +66,7 @@ void TriangleScene::transfer()
 {
 
 }
-void TriangleScene::frame()
+void TriangleScene::frame(float dt)
 {
 	VulkanRenderer::FrameInfo info = _renderHandle->beginFramePass();
 	vkCmdSetViewport(info._buf, 0, 1, &_renderHandle->getViewport());

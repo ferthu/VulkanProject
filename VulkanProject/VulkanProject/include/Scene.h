@@ -16,7 +16,7 @@ public:
 	virtual VkRenderPass defineRenderPass(VkDevice device, VkFormat swapchainFormat, VkFormat depthFormat, std::vector<VkImageView>& additionalAttatchments) = 0;
 
 	virtual void initialize(VulkanRenderer *handle) { _renderHandle = handle; };
-	virtual void frame() = 0;
+	virtual void frame(float dt) = 0;
 	virtual void transfer() = 0;
 
 	virtual ~Scene() {};

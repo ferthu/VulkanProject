@@ -32,7 +32,7 @@ public:
 	ComputeExperiment(Mode mode = ASYNC, uint32_t shader = REG_LIMITED, uint32_t num_particles = 1024 * 512, float locality = 8);
 	~ComputeExperiment();
 
-	virtual void frame();
+	virtual void frame(float dt);
 	virtual void transfer();
 	virtual void initialize(VulkanRenderer *handle);
 	virtual void defineDescriptorLayout(VkDevice device, std::vector<VkDescriptorSetLayout> &layout);

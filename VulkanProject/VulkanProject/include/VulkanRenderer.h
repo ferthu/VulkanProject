@@ -67,7 +67,7 @@ public:
 	void setWinTitle(const char* title);
 
 	int initialize(Scene *scene, unsigned int width, unsigned int height, uint32_t BIT_FLAGS);
-	void frame();
+	void frame(float dt);
 	void present();
 
 	struct FrameInfo
@@ -185,8 +185,9 @@ private:
 	
 	VkBuffer stagingBuffer;			// Buffer to temporarily hold data being transferred to GPU
 
+	public:
 	vk::QueueConstruct queues;
-
+	private:
 	VkSurfaceFormatKHR swapchainFormat;
 	VkExtent2D swapchainExtent;
 
