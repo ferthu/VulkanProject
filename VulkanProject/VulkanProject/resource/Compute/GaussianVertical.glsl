@@ -1,7 +1,7 @@
 #version 450
 layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 layout(Rgba8, set=0, binding = 0) uniform image2D img;
-const uint IMG_DIM = 1024;
+const uint IMG_HEIGHT = 1024;
 
 //const uint H_DIM = 5;
 //float conv[H_DIM+1] = {0.39905, 0.242036, 0.054, 0.004433};
@@ -36,7 +36,7 @@ uint calcIndex(uint iter)
 void main() {
 
   uint s_ind = sharedInd();
-  uint iters = divCeil(IMG_DIM, gl_WorkGroupSize.x);
+  uint iters = divCeil(IMG_HEIGHT, gl_WorkGroupSize.x);
   for(uint i = 0; i < iters; i++)
   {
     // Fetch data
