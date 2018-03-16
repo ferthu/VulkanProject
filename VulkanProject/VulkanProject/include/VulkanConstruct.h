@@ -181,8 +181,10 @@ VkSampler createSampler(VkDevice device, VkFilter magFilter = VK_FILTER_LINEAR, 
 	VkSamplerAddressMode wrap_s = VK_SAMPLER_ADDRESS_MODE_REPEAT, VkSamplerAddressMode wrap_t = VK_SAMPLER_ADDRESS_MODE_REPEAT);
 
 //Transitions, should prob. be moved.
-void transition_PostToPresent(VkCommandBuffer cmdBuf, VkImage img, int srcQueueFamily, int dstQueueFamily);
-void transition_ComputeToPost(VkCommandBuffer cmdBuf, VkImage img, int srcQueueFamily, int dstQueueFamily);
+void transition_PostToPresent(VkCommandBuffer cmdBuf, VkImage img, int srcQueueFamily = VK_QUEUE_FAMILY_IGNORED, int dstQueueFamily = VK_QUEUE_FAMILY_IGNORED);
+void transition_RenderToPost(VkCommandBuffer cmdBuf, VkImage img, int srcQueueFamily = VK_QUEUE_FAMILY_IGNORED, int dstQueueFamily = VK_QUEUE_FAMILY_IGNORED);
+void transition_DepthRead(VkCommandBuffer cmdBuf, VkImage img, int srcQueueFamily = VK_QUEUE_FAMILY_IGNORED, int dstQueueFamily = VK_QUEUE_FAMILY_IGNORED);
+void transition_DepthWrite(VkCommandBuffer cmdBuf, VkImage img, int srcQueueFamily = VK_QUEUE_FAMILY_IGNORED, int dstQueueFamily = VK_QUEUE_FAMILY_IGNORED);
 
 /* Shader */
 
@@ -1159,12 +1161,12 @@ VkSampler createSampler(VkDevice device, VkFilter magFilter, VkFilter minFilter,
 	return sampler;
 }
 
-void transition_ComputeToPost(VkCommandBuffer cmdBuf, VkImage img, int srcQueueFamily, int dstQueueFamily)
+void transition_RenderToPost(VkCommandBuffer cmdBuf, VkImage img, int srcQueueFamily, int dstQueueFamily)
 {
-	VkPipelineStageFlags sourceStage;
-	VkPipelineStageFlags destinationStage;
-	sourceStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;	// Src. stage was dependent during the output stage of the hardware pipe.
-	destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;		// Memory access req. synchronization during compute execution.
+	VkPipelineStageFlags sourceStage
+		= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;	// Src. stage was dependent during the output stage of the hardware pipe.
+	VkPipelineStageFlags destinationStage
+		= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;		// Memory access req. synchronization during compute execution.
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 	barrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
@@ -1184,10 +1186,10 @@ void transition_ComputeToPost(VkCommandBuffer cmdBuf, VkImage img, int srcQueueF
 }
 void transition_PostToPresent(VkCommandBuffer cmdBuf, VkImage img, int srcQueueFamily, int dstQueueFamily)
 {
-	VkPipelineStageFlags sourceStage;
-	VkPipelineStageFlags destinationStage;
-	sourceStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-	destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	VkPipelineStageFlags sourceStage
+		= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+	VkPipelineStageFlags destinationStage
+		= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 	barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -1202,6 +1204,54 @@ void transition_PostToPresent(VkCommandBuffer cmdBuf, VkImage img, int srcQueueF
 	barrier.subresourceRange.levelCount = 1;
 	barrier.subresourceRange.baseArrayLayer = 0;
 	barrier.subresourceRange.layerCount = 1;
+
+	cmdImageTransition(cmdBuf, sourceStage, destinationStage, barrier);
+}
+void transition_DepthRead(VkCommandBuffer cmdBuf, VkImage img, int srcQueueFamily, int dstQueueFamily)
+{
+	VkPipelineStageFlags sourceStage 
+		= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;	
+	VkPipelineStageFlags destinationStage
+		= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	VkImageMemoryBarrier barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.pNext = nullptr;
+	barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	barrier.srcQueueFamilyIndex = srcQueueFamily;
+	barrier.dstQueueFamilyIndex = dstQueueFamily;
+	barrier.image = img;
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.layerCount = 1;
+	barrier.subresourceRange.levelCount = 1;
+
+	cmdImageTransition(cmdBuf, sourceStage, destinationStage, barrier);
+}
+void transition_DepthWrite(VkCommandBuffer cmdBuf, VkImage img, int srcQueueFamily, int dstQueueFamily)
+{
+	VkPipelineStageFlags sourceStage
+		= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	VkPipelineStageFlags destinationStage
+		= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	VkImageMemoryBarrier barrier = {};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.pNext = nullptr;
+	barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	barrier.srcQueueFamilyIndex = srcQueueFamily;
+	barrier.dstQueueFamilyIndex = dstQueueFamily;
+	barrier.image = img;
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.layerCount = 1;
+	barrier.subresourceRange.levelCount = 1;
 
 	cmdImageTransition(cmdBuf, sourceStage, destinationStage, barrier);
 }

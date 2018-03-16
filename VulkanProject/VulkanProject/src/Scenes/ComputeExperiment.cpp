@@ -196,12 +196,13 @@ void ComputeExperiment::frame(float dt)
 
 	*/
 	// Finish
+	_renderHandle->endRenderPass();
 	_renderHandle->submitFramePass();
 
 
 	// Post pass
 	info = _renderHandle->beginCompute();
-	transition_ComputeToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
+	transition_RenderToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
 
 	// Dispatch frame compute shader
 	techniquePost->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);

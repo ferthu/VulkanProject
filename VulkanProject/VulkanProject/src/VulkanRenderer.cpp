@@ -502,16 +502,18 @@ void VulkanRenderer::beginRenderPass(VkCommandBuffer cmdBuf, VkFramebuffer* fram
 	delete clearValues;
 }
 
+void VulkanRenderer::endRenderPass()
+{
+	VkCommandBuffer cmdBuf = _frameCmdBuf[getFrameIndex()];
+	vkCmdEndRenderPass(cmdBuf);
+}
+
 void VulkanRenderer::submitFramePass()
 {
-
 	VkCommandBuffer cmdBuf = _frameCmdBuf[getFrameIndex()];
-
-	vkCmdEndRenderPass(cmdBuf);
 	if (vkEndCommandBuffer(cmdBuf) != VK_SUCCESS) {
 		throw std::runtime_error("failed to record command buffer!");
 	}
-
 	// Submit
 	VkSemaphore waitSemaphores[] = { imageAvailable };
 	VkSemaphore signalSemaphores[] = { renderFinished[getFrameIndex()] };

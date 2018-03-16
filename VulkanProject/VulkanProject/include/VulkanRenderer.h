@@ -82,6 +82,7 @@ public:
 	// These two functions are used instead of beginFramePass when their functionality needs to be separated
 	FrameInfo beginCommandBuffer();
 	void beginRenderPass(VkCommandBuffer cmdBuf, VkFramebuffer* frameBuffer = NULL);
+	void endRenderPass();
 
 	FrameInfo beginCompute(uint32_t computeQueueIndex = 0);
 	void submitFramePass();

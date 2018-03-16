@@ -33,6 +33,7 @@ private:
 	glm::mat4 createCameraMatrix(float time);
 
 	void createBuffers();
+	void post();
 
 	const uint32_t shadowMappingMatrixBindingSlot = 0;
 
@@ -79,4 +80,11 @@ private:
 
 	VkRenderPass shadowRenderPass;
 	VkFramebuffer shadowFramebuffer;
+
+
+	// Post pass
+	TechniqueVulkan *techniqueBlurHorizontal, *techniqueBlurVertical;
+	vk::LayoutConstruct postLayout;
+	ShaderVulkan *blurHorizontal, *blurVertical;
+	std::vector<VkDescriptorSet> swapChainImgDesc;
 };
