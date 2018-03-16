@@ -342,6 +342,7 @@ void ShadowScene::frame()
 
 	_renderHandle->endRenderPass();
 	// Submit
+	transition_DepthWrite(info._buf, shadowMap->_imageHandle);
 	_renderHandle->submitFramePass();
 
 	post();
