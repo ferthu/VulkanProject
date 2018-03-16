@@ -14,16 +14,16 @@ ShadowScene::ShadowScene()
 	lightMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -4.0f)) * lightMatrix;
 	lightMatrix = orthographicMatrix(-4.0f, 4.0f, -4.0f, 4.0f, 0.1f, 10.0f) * lightMatrix;
 
-	this->transformMatrix = createCameraMatrix(0.0f);
+	createCameraMatrix(0.0f);
 	shadowMappingMatrix = lightMatrix;
-	clipSpaceToShadowMapMatrix = lightMatrix;
+	lightInfo.clipSpaceToShadowMapMatrix = lightMatrix;
 }
 
 ShadowScene::~ShadowScene()
 {
 	delete shadowMappingMatrixBuffer;
 	delete transformMatrixBuffer;
-	delete clipSpaceToShadowMapMatrixBuffer;
+	delete lightInfoBuffer;
 
 	delete positionBuffer;
 	delete normalBuffer;
@@ -233,7 +233,7 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	renderPassInfoWrites[1].pBufferInfo = &transformMatrixInfo;
 
 	VkDescriptorBufferInfo clipSpaceToShadowMapMatrixInfo = {};
-	clipSpaceToShadowMapMatrixInfo.buffer = clipSpaceToShadowMapMatrixBuffer->getBuffer();
+	clipSpaceToShadowMapMatrixInfo.buffer = lightInfoBuffer->getBuffer();
 	clipSpaceToShadowMapMatrixInfo.offset = 0;
 	clipSpaceToShadowMapMatrixInfo.range = VK_WHOLE_SIZE;
 
@@ -297,11 +297,16 @@ void ShadowScene::frame(float dt)
 {
 	static float counter = 0.0f;
 	counter += dt;
-	transformMatrix = createCameraMatrix(counter);
+	createCameraMatrix(counter);
 
 	VkCommandBuffer cmdBuf = beginSingleCommand(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].pool);
 	transformMatrixBuffer->setData(&transformMatrix, sizeof(glm::mat4), 1);
 	endSingleCommand_Wait(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].queue, _renderHandle->queues[QueueType::MEM].pool, cmdBuf);
+
+	cmdBuf = beginSingleCommand(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].pool);
+	lightInfoBuffer->setData(&lightInfo, sizeof(lightInfo), 1);
+	endSingleCommand_Wait(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].queue, _renderHandle->queues[QueueType::MEM].pool, cmdBuf);
+
 
 	VulkanRenderer::FrameInfo info = _renderHandle->beginCommandBuffer();
 
@@ -521,9 +526,9 @@ void ShadowScene::createBuffers()
 	transformMatrixBuffer->setUseCustomDescriptor(true);
 	transformMatrixBuffer->setData(&transformMatrix, sizeof(glm::mat4), 1);
 
-	clipSpaceToShadowMapMatrixBuffer = new ConstantBufferVulkan(_renderHandle);
-	clipSpaceToShadowMapMatrixBuffer->setUseCustomDescriptor(true);
-	clipSpaceToShadowMapMatrixBuffer->setData(&clipSpaceToShadowMapMatrix, sizeof(glm::mat4), 1);
+	lightInfoBuffer = new ConstantBufferVulkan(_renderHandle);
+	lightInfoBuffer->setUseCustomDescriptor(true);
+	lightInfoBuffer->setData(&lightInfo, sizeof(lightInfo), 1);
 }
 
 glm::mat4 ShadowScene::rotationMatrix(float angle, glm::vec3 const& axis)
@@ -621,12 +626,14 @@ glm::mat4 ShadowScene::perspectiveMatrix(float aspectRatio, float fov, float nea
 	return perspective;
 }
 
-glm::mat4 ShadowScene::createCameraMatrix(float time)
+void ShadowScene::createCameraMatrix(float time)
 {
 	glm::mat4 cameraMatrix = glm::mat4(1.0f);
-	cameraMatrix = rotationMatrix(glm::pi<float>() * 0.2f * sinf(time), glm::vec3(.0f, 1.0f, .0f)) * cameraMatrix;
-	cameraMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f * sinf(time), 0.5f * sinf(time * 0.1f), -4.0f)) * cameraMatrix;
-	cameraMatrix = perspectiveMatrix(800.0f / 600.0f, 1.0f, 0.1f, 10.0f) * cameraMatrix;
-	//cameraMatrix = orthographicMatrix(-4.0f, 4.0f, -4.0f, 4.0f, 0.1f, 10.0f) * cameraMatrix;
-	return cameraMatrix;
+	glm::mat4 rot = rotationMatrix(glm::pi<float>() * 0.2f * sinf(time), glm::vec3(.0f, 1.0f, .0f));
+	glm::mat4 tra = glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f * sinf(time), 0.5f * sinf(time * 0.1f), -4.0f));
+	glm::mat4 per = perspectiveMatrix(800.0f / 600.0f, 1.0f, 0.1f, 10.0f);
+	//glm::mat4 per = orthographicMatrix(-4.0f, 4.0f, -4.0f, 4.0f, 0.1f, 10.0f) * cameraMatrix;
+
+	transformMatrix = per * tra * rot * cameraMatrix;
+	lightInfo.lightDirection = glm::inverse(rot) * glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
 }

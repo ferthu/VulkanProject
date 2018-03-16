@@ -30,7 +30,7 @@ private:
 	glm::mat4 orthographicMatrix(float left, float right, float bottom, float top, float near, float far);
 	glm::mat4 perspectiveMatrix(float aspectRatio, float fov, float near, float far);
 	// Rotate the camera based on time
-	glm::mat4 createCameraMatrix(float time);
+	void createCameraMatrix(float time);
 
 	void createBuffers();
 	void post();
@@ -46,11 +46,17 @@ private:
 	glm::mat4 shadowMappingMatrix;			// Contains all transformations done in the shadow mapping pass
 	ConstantBufferVulkan* shadowMappingMatrixBuffer;
 
+
 	glm::mat4 transformMatrix;				// Contains all transformations done on the geometry in the rendering pass
 	ConstantBufferVulkan* transformMatrixBuffer;
 
-	glm::mat4 clipSpaceToShadowMapMatrix;	// Transfoms a coordinate in clip space to a coordinate on shadow map
-	ConstantBufferVulkan* clipSpaceToShadowMapMatrixBuffer;
+	struct LightInfo
+	{
+		glm::mat4 clipSpaceToShadowMapMatrix;
+		glm::vec4 lightDirection;
+	};
+	LightInfo lightInfo;	// Transfoms a coordinate in clip space to a coordinate on shadow map
+	ConstantBufferVulkan* lightInfoBuffer;
 
 	// Positions and normals of the triangles to render
 	VertexBufferVulkan* positionBuffer;

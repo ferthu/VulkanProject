@@ -6,6 +6,7 @@ layout(set=1,binding=0) uniform sampler2DShadow shadowMap;
 layout(set=1,binding=2) uniform ToLight
 {
 	mat4 toLight;
+	vec4 lightDir;
 } tl;
 
 layout(location = 0) out vec4 outColor;
@@ -30,8 +31,7 @@ void main()
 
 	vec4 colorFromLight = vec4(0.0, 0.6, 0.7, 1.0) * finalSample;
 
-	vec4 lightDir = vec4(0, 0, -1, 0);	// Pass into shader?
-	float angleAttenuation = max(dot(normal, lightDir.xyz), 0.0);
+	float angleAttenuation = max(dot(normal, tl.lightDir.xyz), 0.0);
 	float rangeAttenuation = max(1.0 - lightSpacePos.z, 0.3);
 
 	outColor = colorFromLight * angleAttenuation * rangeAttenuation + vec4(0.05, 0.03, 0.03, 1.0) * max(dot(normal, vec3(1,0,0)), 0) + vec4(0.05, 0.03, 0.03, 1.0);
