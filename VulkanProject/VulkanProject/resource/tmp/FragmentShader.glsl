@@ -22,10 +22,10 @@ void main()
 	vec2 samplePos = vec2((lightSpacePos.x + 1) * 0.5, (lightSpacePos.y + 1) * 0.5);
 	vec2 frac = vec2(samplePos.x * shadowMapSize - floor(samplePos.x * shadowMapSize), samplePos.y * shadowMapSize - floor(samplePos.y * shadowMapSize));
 	vec2 flooredSamplePos = vec2(samplePos.x - frac.x / shadowMapSize, samplePos.y - frac.y / shadowMapSize);
-	float sample1 = float(!((texture(shadowMap, vec3(flooredSamplePos.x, flooredSamplePos.y, 0), 0.1f) - lightSpacePos.z) < -0.01));
-	float sample2 = float(!((texture(shadowMap, vec3(flooredSamplePos.x + texelSize, flooredSamplePos.y, 0), 0.1f) - lightSpacePos.z) < -0.01));
-	float sample3 = float(!((texture(shadowMap, vec3(flooredSamplePos.x, flooredSamplePos.y + texelSize, 0), 0.1f) - lightSpacePos.z) < -0.01));
-	float sample4 = float(!((texture(shadowMap, vec3(flooredSamplePos.x + texelSize, flooredSamplePos.y + texelSize, 0), 0.1f) - lightSpacePos.z) < -0.01));
+	float sample1 = float((texture(shadowMap, vec3(flooredSamplePos.x, flooredSamplePos.y, 0), 0.1f) - lightSpacePos.z) > -0.01);
+	float sample2 = float((texture(shadowMap, vec3(flooredSamplePos.x + texelSize, flooredSamplePos.y, 0), 0.1f) - lightSpacePos.z) > -0.01);
+	float sample3 = float((texture(shadowMap, vec3(flooredSamplePos.x, flooredSamplePos.y + texelSize, 0), 0.1f) - lightSpacePos.z) > -0.01);
+	float sample4 = float((texture(shadowMap, vec3(flooredSamplePos.x + texelSize, flooredSamplePos.y + texelSize, 0), 0.1f) - lightSpacePos.z) > -0.01);
 	float finalSample = (sample1 * (1.0 - frac.x) + sample2 * frac.x) * (1.0 - frac.y) +
 		(sample3 * (1.0 - frac.x) + sample4 * frac.x) * frac.y;
 
