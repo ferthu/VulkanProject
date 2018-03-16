@@ -10,28 +10,32 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 #undef main
 
 void updateWinTitle(VulkanRenderer *rend);
-void outPerfCounters();
+void outPerfCounters(std::string params);
 
 static std::vector<double>	perfCounter;
 static double elapsedTime = 0.0;
 static double lastElapsedTime = 0.0;
 const double INIT_WAIT_TIMER = 100;
-const double RUN_DURATION = INIT_WAIT_TIMER - 1000.f; //ms
+const double RUN_DURATION = INIT_WAIT_TIMER + 1000.f; //ms
 
 
 int main(int argc, const char* argv)
 {
 	VulkanRenderer renderer;
 	perfCounter.reserve(10000);
-
-	//renderer.initialize( new ComputeExperiment(ComputeExperiment::Mode::ASYNC, ComputeExperiment::MEM_LIMITED | ComputeExperiment::MEM_LIMITED_ANIMATED, 1024 * 512), 1024, 1024, TRIPLE_BUFFERED); // 256, 256
+	uint32_t particles = 512 * 1024;
+	uint32_t dimW = 1024, dimH = 1024, pixels = dimW * dimH;
+	std::stringstream outString;
+	outString << "ASYNC" << ", " << pixels << ", " << particles;
+	renderer.initialize( new ComputeExperiment(ComputeExperiment::Mode::ASYNC, ComputeExperiment::MEM_LIMITED, particles), dimW, dimH, TRIPLE_BUFFERED); // 256, 256
 	//renderer.initialize(new ComputeScene(ComputeScene::Mode::Blur), 512, 512, TRIPLE_BUFFERED);
 	//renderer.initialize(new TriangleScene(), 512, 512, 0);
-	renderer.initialize(new ShadowScene(), 800, 600, 0);
+	//renderer.initialize(new ShadowScene(), 800, 600, 0);
 
 	SDL_Event windowEvent;
 	while (true)
@@ -46,7 +50,7 @@ int main(int argc, const char* argv)
 		updateWinTitle(&renderer);
 		if (RUN_DURATION > 0 && elapsedTime > RUN_DURATION)	break;
 	}
-	outPerfCounters();
+	outPerfCounters(outString.str());
 	renderer.beginShutdown();
 	renderer.shutdown();
 }
@@ -86,21 +90,46 @@ void updateWinTitle(VulkanRenderer *rend)
 	rend->setWinTitle(gTitleBuff);
 };
 
-void outPerfCounters()
+double mean(const std::vector<double> &data)
+{
+	double sum = 0;
+	for (size_t i = 0; i < data.size(); i++)
+		sum += data[i] / data.size();
+	return sum;
+}
+double stdev(const std::vector<double> &data, double mean)
+{
+	double sum = 0;
+	for (size_t i = 0; i < data.size(); i++)
+	{
+		double diff = (data[i] - mean);
+		sum += diff*diff / data.size();
+	}
+	return std::sqrt(sum);
+}
+
+double sum(const std::vector<double> &data)
+{
+	double sum = 0;
+	for (size_t i = 0; i < data.size(); i++)
+		sum += data[i];
+	return sum;
+}
+
+void outPerfCounters(std::string params)
 {
 	if (perfCounter.size() == 0) return;
 
 	// Write perf counters into file
-	std::ofstream stream("Perf.log");
+	std::ofstream stream("Perf.log", std::ios::app | std::ios::out);
 	if (stream.is_open())
 	{
-		stream << "#Elapsed, Delta\n";
-		double elapsedTime = 0;
-		for (int i = 0; i < (int)perfCounter.size(); i++)
-		{
-			stream << elapsedTime << ", " << perfCounter[i] << "\n";
-			elapsedTime += perfCounter[i];
-		}
+		if (params.size() > 0)
+			stream << params << ", ";
+
+		double avg = mean(perfCounter);
+		double dev = stdev(perfCounter, avg);
+		stream << sum(perfCounter) << ", " << avg << ", " << dev << "\n";
 		stream.close();
 	}
 }
