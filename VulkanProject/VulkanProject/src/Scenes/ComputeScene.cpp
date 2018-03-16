@@ -139,13 +139,14 @@ void ComputeScene::mainPass()
 	//vkCmdNextSubpass(cmdBuf, VK_SUBPASS_CONTENTS_INLINE); // Subpass is inlined in primary command buffer
 
 	// Finish
+	_renderHandle->endRenderPass();
 	_renderHandle->submitFramePass();
 
 }
 void ComputeScene::post(VulkanRenderer::FrameInfo info)
 {
 	// Post pass
-	transition_ComputeToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
+	transition_RenderToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
 
 	// Bind compute shader
 	techniquePost->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);

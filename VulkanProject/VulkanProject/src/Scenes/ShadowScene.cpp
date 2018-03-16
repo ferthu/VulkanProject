@@ -49,6 +49,11 @@ ShadowScene::~ShadowScene()
 	vkDestroyDescriptorPool(_renderHandle->getDevice(), desciptorPool, nullptr);
 
 	pipelineLayoutConstruct.destroy(_renderHandle->getDevice());
+
+	//Post
+	delete techniqueBlurHorizontal, delete techniqueBlurVertical;
+	delete blurHorizontal, delete blurVertical;
+	postLayout.destroy(_renderHandle->getDevice());
 }
 
 void ShadowScene::initialize(VulkanRenderer* handle)
@@ -247,6 +252,46 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	renderPassInfoWrites[2].pBufferInfo = &clipSpaceToShadowMapMatrixInfo;
 
 	vkUpdateDescriptorSets(_renderHandle->getDevice(), 3, &renderPassInfoWrites[0], 0, nullptr);
+
+
+	// Post pass initiation
+
+	//Layout
+	VkDescriptorSetLayoutBinding binding;
+	postLayout = vk::LayoutConstruct(2);
+	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT);
+	postLayout[0] = createDescriptorLayout(_renderHandle->getDevice(), &binding, 1);
+	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_COMPUTE_BIT);
+	postLayout[1] = createDescriptorLayout(_renderHandle->getDevice(), &binding, 1);
+	// Gen. layout
+	postLayout.construct(_renderHandle->getDevice());
+
+	// Gen. shaders
+	blurHorizontal = new ShaderVulkan("CopyCompute", _renderHandle);
+	blurHorizontal->setShader("resource/Compute/GaussianHorizontal.glsl", ShaderVulkan::ShaderType::CS);
+	blurHorizontal->compileMaterial(err);
+
+	blurVertical = new ShaderVulkan("CopyCompute", _renderHandle);
+	blurVertical->setShader("resource/Compute/GaussianVertical.glsl", ShaderVulkan::ShaderType::CS);
+	blurVertical->compileMaterial(err);
+
+	// Gen techniques
+	techniqueBlurHorizontal = new TechniqueVulkan(_renderHandle, blurHorizontal, postLayout._layout);
+	techniqueBlurVertical = new TechniqueVulkan(_renderHandle, blurVertical, postLayout._layout);
+
+	// Frame buffer image bindings
+	swapChainImgDesc.resize(_renderHandle->getSwapChainLength());
+	VkDescriptorImageInfo imgInfo[5];
+	VkWriteDescriptorSet writeInfo[5];
+	for (size_t i = 0; i < swapChainImgDesc.size(); i++)
+	{
+		imgInfo[i].sampler = NULL;
+		imgInfo[i].imageView = _renderHandle->getSwapChainView(i);
+		imgInfo[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		swapChainImgDesc[i] = _renderHandle->generateDescriptor(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, postLayout._desc);
+		writeDescriptorStruct_IMG_STORAGE(writeInfo[i], swapChainImgDesc[i], 0, 0, 1, imgInfo + i);
+	}
+	vkUpdateDescriptorSets(_renderHandle->getDevice(), (uint32_t)swapChainImgDesc.size(), writeInfo, 0, nullptr);
 }
 
 void ShadowScene::transfer()
@@ -284,24 +329,7 @@ void ShadowScene::frame()
 	vkCmdEndRenderPass(info._buf);
 
 	// Image barrier transferring image layout
-	VkImageMemoryBarrier imageBarrier = {};
-	imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	imageBarrier.pNext = nullptr;
-	imageBarrier.srcAccessMask = VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-	imageBarrier.dstAccessMask = VkAccessFlagBits::VK_ACCESS_SHADER_READ_BIT;
-	imageBarrier.oldLayout = VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	imageBarrier.newLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	imageBarrier.srcQueueFamilyIndex = 0;
-	imageBarrier.dstQueueFamilyIndex = 0;
-	imageBarrier.image = shadowMap->_imageHandle;
-	imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-	imageBarrier.subresourceRange.baseArrayLayer = 0;
-	imageBarrier.subresourceRange.baseMipLevel = 0;
-	imageBarrier.subresourceRange.layerCount = 1;
-	imageBarrier.subresourceRange.levelCount = 1;
-
-	vkCmdPipelineBarrier(info._buf, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-		0, nullptr, 0, nullptr, 1, &imageBarrier);
+	transition_DepthRead(info._buf, shadowMap->_imageHandle);
 	
 	// Rendering pass
 	_renderHandle->beginRenderPass(info._buf);
@@ -312,8 +340,38 @@ void ShadowScene::frame()
 
 	vkCmdDraw(info._buf, positionBufferBinding.numElements, 1, 0, 0);
 
+	_renderHandle->endRenderPass();
+	// Submit
 	_renderHandle->submitFramePass();
+
+	post();
+
 	_renderHandle->present();
+}
+
+
+void ShadowScene::post()
+{
+
+	VulkanRenderer::FrameInfo info = _renderHandle->beginCompute();
+	transition_RenderToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
+
+
+	// Bind compute shader
+	techniqueBlurHorizontal->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
+	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
+	// Dispatch
+	vkCmdDispatch(info._buf, 1, 512, 1);
+
+
+	// Bind compute shader
+	techniqueBlurVertical->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
+	// Dispatch
+	vkCmdDispatch(info._buf, 1, 512, 1);
+
+	// Finish
+	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
+	_renderHandle->submitCompute();
 }
 
 

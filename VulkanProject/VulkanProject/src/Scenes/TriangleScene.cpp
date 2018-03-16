@@ -77,6 +77,7 @@ void TriangleScene::frame()
 	triVertexBinding.bind(info._buf, 0);
 	vkCmdDraw(info._buf, (uint32_t)triVertexBinding.numElements, 1, 0, 0);
 
+	_renderHandle->endRenderPass();
 	_renderHandle->submitFramePass();
 	_renderHandle->present();
 }

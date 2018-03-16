@@ -31,6 +31,7 @@ private:
 	glm::mat4 perspectiveMatrix(float aspectRatio, float fov, float near, float far);
 
 	void createBuffers();
+	void post();
 
 	const uint32_t shadowMappingMatrixBindingSlot = 0;
 
@@ -77,4 +78,11 @@ private:
 
 	VkRenderPass shadowRenderPass;
 	VkFramebuffer shadowFramebuffer;
+
+
+	// Post pass
+	TechniqueVulkan *techniqueBlurHorizontal, *techniqueBlurVertical;
+	vk::LayoutConstruct postLayout;
+	ShaderVulkan *blurHorizontal, *blurVertical;
+	std::vector<VkDescriptorSet> swapChainImgDesc;
 };
