@@ -4,6 +4,8 @@
 #include "VertexBufferVulkan.h"
 
 #include "glm\gtc\matrix_transform.hpp"
+#define OBJ_READER_SIMPLE
+#include "Stuff/ObjReaderSimple.h"
 
 ShadowScene::ShadowScene()
 {
@@ -53,28 +55,46 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 {
 	Scene::initialize(handle);
 
-	// Create triangles
-	const uint32_t TRIANGLE_COUNT = 100;
-	glm::vec4 vertexPositions[TRIANGLE_COUNT * 3] /*= { 
-		{ 0.0f, 2.7f, 0.4f, 1.0f }, { -2.7f, -2.0f, 0.4f, 1.0f }, { 2.7f, -2.0f, 0.4f, 1.0f },
-		{ 0.0f, 4.0f, -1.1f, 1.0f }, { -4.0f, -2.0f, -1.1f, 1.0f }, { 4.0f, -2.0f, -1.1f, 1.0f } }*/;
-	glm::vec3 vertexNormals[TRIANGLE_COUNT * 3] /*= {
-		{ 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f, -1.0f },
-		{ 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f, -1.0f } }*/;
 
-	mf::RandomGenerator randomGenerator;
-	randomGenerator.seedGenerator();
-	//randomGenerator.setSeed({ 2 });
-	mf::distributeTriangles(randomGenerator, 2.0f, TRIANGLE_COUNT, glm::vec2(0.6f, 0.8f), vertexPositions, vertexNormals);
 
 	// Create vertex buffer
-	positionBuffer = new VertexBufferVulkan(handle, TRIANGLE_COUNT * 3 * sizeof(glm::vec4), VertexBufferVulkan::DATA_USAGE::STATIC);
-	positionBufferBinding = VertexBufferVulkan::Binding(positionBuffer, sizeof(glm::vec4), TRIANGLE_COUNT * 3, 0);
-	positionBuffer->setData(vertexPositions, positionBufferBinding);
+	if (false)
+	{
+		// Create triangles
+		const uint32_t TRIANGLE_COUNT = 100;
+		glm::vec4 vertexPositions[TRIANGLE_COUNT * 3];
+		glm::vec3 vertexNormals[TRIANGLE_COUNT * 3];
 
-	normalBuffer = new VertexBufferVulkan(handle, TRIANGLE_COUNT * 3 * sizeof(glm::vec3), VertexBufferVulkan::DATA_USAGE::STATIC);
-	normalBufferBinding = VertexBufferVulkan::Binding(normalBuffer, sizeof(glm::vec3), TRIANGLE_COUNT * 3, 0);
-	normalBuffer->setData(vertexNormals, normalBufferBinding);
+		mf::RandomGenerator randomGenerator;
+		randomGenerator.seedGenerator();
+		//randomGenerator.setSeed({ 2 });
+		mf::distributeTriangles(randomGenerator, 2.0f, TRIANGLE_COUNT, glm::vec2(0.6f, 0.8f), vertexPositions, vertexNormals);
+
+		//Create buffers
+		positionBuffer = new VertexBufferVulkan(handle, TRIANGLE_COUNT * 3 * sizeof(glm::vec4), VertexBufferVulkan::DATA_USAGE::STATIC);
+		positionBufferBinding = VertexBufferVulkan::Binding(positionBuffer, sizeof(glm::vec4), TRIANGLE_COUNT * 3, 0);
+		normalBuffer = new VertexBufferVulkan(handle, TRIANGLE_COUNT * 3 * sizeof(glm::vec3), VertexBufferVulkan::DATA_USAGE::STATIC);
+		normalBufferBinding = VertexBufferVulkan::Binding(normalBuffer, sizeof(glm::vec3), TRIANGLE_COUNT * 3, 0);
+
+		positionBuffer->setData(vertexPositions, positionBufferBinding);
+		normalBuffer->setData(vertexNormals, normalBufferBinding);
+	}
+	else
+	{
+		SimpleMesh mesh, baked;
+		if (readObj("resource/Suzanne.obj", mesh))
+			std::cout << "Obj read successfull\n";
+		mesh.bake(SimpleMesh::BitFlag::NORMAL_BIT | SimpleMesh::TRIANGLE_ARRAY | SimpleMesh::POS_4_COMPONENT, baked);
+
+		size_t num_tri = baked._position.size() / 4;
+		positionBuffer = new VertexBufferVulkan(handle, num_tri * sizeof(glm::vec4), VertexBufferVulkan::DATA_USAGE::STATIC);
+		positionBufferBinding = VertexBufferVulkan::Binding(positionBuffer, sizeof(glm::vec4), num_tri, 0);
+		normalBuffer = new VertexBufferVulkan(handle, num_tri * sizeof(glm::vec3), VertexBufferVulkan::DATA_USAGE::STATIC);
+		normalBufferBinding = VertexBufferVulkan::Binding(normalBuffer, sizeof(glm::vec3), num_tri, 0);
+
+		positionBuffer->setData(baked._position.data(), positionBufferBinding);
+		normalBuffer->setData(baked._normal.data(), normalBufferBinding);
+	}
 
 	// Create shaders
 	depthPassShaders = new ShaderVulkan("depthPassShaders", handle);

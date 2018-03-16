@@ -38,6 +38,11 @@ void SimpleMesh::bake(unsigned int FLAG, SimpleMesh &bakeOutput)
 	// Specified coordinates
 	bool NOR = _normal.size() > 0 && hasFlag(FLAG, BitFlag::NORMAL_BIT);
 	bool UV = _uv.size() > 0 && hasFlag(FLAG, BitFlag::UV_BIT);
+	bool NO_IND = hasFlag(FLAG, BitFlag::TRIANGLE_ARRAY);
+	bool COMP_4 = hasFlag(FLAG, BitFlag::POS_4_COMPONENT);
+	float COMP = hasFlag(_mesh_flags, BitFlag::POS_4_COMPONENT) ? 4 : 3;
+	if(COMP)
+		bakeOutput._mesh_flags |= BitFlag::POS_4_COMPONENT;
 
 	// Clear/Reserve
 	bakeOutput._part.clear();
@@ -57,7 +62,7 @@ void SimpleMesh::bake(unsigned int FLAG, SimpleMesh &bakeOutput)
 		VerticeInd indID = { _face_ind[i], (NOR ? _face_nor[i] : 0u), (UV ? _face_uv[i] : 0u) };
 
 		// Find vert indice
-		auto it = existMap.find(indID);
+		auto it = NO_IND ? existMap.end() : existMap.find(indID);
 		uint32_t ind;
 		if (it != existMap.end())
 			ind = it->second;
@@ -65,13 +70,25 @@ void SimpleMesh::bake(unsigned int FLAG, SimpleMesh &bakeOutput)
 		{
 			// New vertice
 			ind = (uint32_t)pos.size();
-			existMap[indID] = ind;
+			if(!NO_IND)
+				existMap[indID] = ind;
 			// Append data
-			pos.push_back(_position[indID._pInd]);
-			if(NOR)
-				nor.push_back(_normal[indID._pInd]);
-			if(UV)
-				uv.push_back(_uv[indID._pInd]);
+			pos.push_back(_position[indID._pInd*COMP]);
+			pos.push_back(_position[indID._pInd * COMP + 1]);
+			pos.push_back(_position[indID._pInd * COMP + 2]);
+			if(COMP_4)
+				pos.push_back(1);
+			if (NOR)
+			{
+				nor.push_back(_normal[indID._pInd*3]);
+				nor.push_back(_normal[indID._pInd*3+1]);
+				nor.push_back(_normal[indID._pInd*3+2]);
+			}
+			if (UV)
+			{
+				uv.push_back(_uv[indID._pInd*2]);
+				uv.push_back(_uv[indID._pInd*2+1]);
+			}
 		}
 		//Split objects
 		if (sepInd < _part.size() && i == _part[sepInd]._ind)
@@ -80,7 +97,8 @@ void SimpleMesh::bake(unsigned int FLAG, SimpleMesh &bakeOutput)
 			sepInd++;
 		}
 		// Add indice
-		indices.push_back(ind);
+		if(!NO_IND)
+			indices.push_back(ind);
 	}
 	bakeOutput._face_ind = std::move(indices);
 	bakeOutput._position = std::move(pos);

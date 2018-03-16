@@ -14,7 +14,9 @@ struct SimpleMesh
 	enum BitFlag
 	{
 		NORMAL_BIT = 1,
-		UV_BIT = 2
+		UV_BIT = 2,
+		TRIANGLE_ARRAY = 4,		// Triangle draw array, no indices
+		POS_4_COMPONENT = 8		// 4 floats per position component initiated with 1.
 	};
 
 	/* Part separator. */
@@ -23,7 +25,7 @@ struct SimpleMesh
 		uint32_t _ind;		//	Index to the indices list of the first model in the object.
 		std::string _name;	//	Name of the object
 	};
-
+	uint32_t _mesh_flags;
 	float _bb[6] = { FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX };
 	//Face indices:
 	std::vector<uint32_t> _face_ind;
@@ -36,6 +38,8 @@ struct SimpleMesh
 	std::vector<float> _uv;
 	//Other:
 	std::vector<unsigned int> _edges;
+
+	SimpleMesh();
 
 	/* If this mesh contains minimal set of required data. */
 	bool valid();
@@ -62,6 +66,11 @@ void mergeBB(float* bb, float* bb2);
 
 
 #ifdef OBJ_READER_SIMPLE
+
+SimpleMesh::SimpleMesh()
+	: _mesh_flags(0)
+{
+}
 
 uint32_t SimpleMesh::size()
 {
@@ -155,8 +164,8 @@ void initBB(float* bb, float* v)
 		std::string s, head, item, vertex[3];
 		std::stringstream ss, ss2;
 		//Input vars:
-		unsigned int a = 0, b = 0;
-		unsigned int v[4], t[4], n[4];
+		uint32_t a = 0, b = 0;
+		uint32_t v[4], t[4], n[4];
 		float xyz[3];
 		//Read lines
 		while (std::getline(stream, s))
@@ -235,12 +244,15 @@ void initBB(float* bb, float* v)
 					{
 						for (int i = 0; i + 2 < num_vert; i++)
 						{
-							mesh._face_ind.push_back(v[i] - 1);
-							if (num_tex == num_vert)	mesh._face_uv.push_back(t[i] - 1);
-							if (num_norm == num_vert)	mesh._face_nor.push_back(n[i] - 1);
-							assert(v[i] > 0);
-							assert(t[i] > 0);
-							assert(n[i] > 0);
+							for (int ii = i; ii < i+3; ii++)
+							{
+								mesh._face_ind.push_back(v[ii] - 1);
+								if (num_tex == num_vert)	mesh._face_uv.push_back(t[ii] - 1);
+								if (num_norm == num_vert)	mesh._face_nor.push_back(n[ii] - 1);
+								assert(v[ii] > 0);
+								assert(t[ii] > 0);
+								assert(n[ii] > 0);
+							}
 						}
 					}
 					else
