@@ -12,7 +12,7 @@ ShadowScene::ShadowScene()
 	glm::mat4 cameraMatrix = glm::mat4(1.0f);
 	cameraMatrix = rotationMatrix(glm::pi<float>() * 0.2f, glm::vec3(.0f, 1.0f, .0f)) * cameraMatrix;
 	cameraMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -4.0f)) * cameraMatrix;
-	cameraMatrix = perspectiveMatrix(600.0f / 800.0f, 1.5f, 0.1f, 10.0f) * cameraMatrix;
+	cameraMatrix = perspectiveMatrix(800.0f / 600.0f, 1.f, 0.1f, 10.0f) * cameraMatrix;
 	//cameraMatrix = orthographicMatrix(-4.0f, 4.0f, -4.0f, 4.0f, 0.1f, 10.0f) * cameraMatrix;
 
 	glm::mat4 lightMatrix = glm::mat4(1.0f);
