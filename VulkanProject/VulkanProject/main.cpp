@@ -21,6 +21,7 @@ static std::vector<double>	perfCounter;
 static double elapsedTime = 0.0;
 static double lastElapsedTime = 0.0;
 const double INIT_WAIT_TIMER = 100;
+const int MIN_SAMPLES = 1000;
 const double RUN_DURATION = INIT_WAIT_TIMER + 1000.f; //ms
 
 
@@ -48,7 +49,7 @@ int main(int argc, const char* argv)
 		renderer.frame(static_cast<float>(elapsedTime - lastElapsedTime) / 1000.0f);
 		lastElapsedTime = elapsedTime;
 		updateWinTitle(&renderer);
-		if (RUN_DURATION > 0 && elapsedTime > RUN_DURATION)	break;
+		if (MIN_SAMPLES < perfCounter.size() && elapsedTime > RUN_DURATION)	break;
 	}
 	outPerfCounters(outString.str());
 	renderer.beginShutdown();
