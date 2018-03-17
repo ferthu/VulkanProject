@@ -71,6 +71,11 @@ void TriangleScene::frame(float dt)
 	VulkanRenderer::FrameInfo info = _renderHandle->beginFramePass();
 	vkCmdSetViewport(info._buf, 0, 1, &_renderHandle->getViewport());
 
+	VkRect2D scissor;
+	scissor.offset = { 0, 0 };
+	scissor.extent = { _renderHandle->getWidth(), _renderHandle->getHeight() };
+	vkCmdSetScissor(info._buf, 0, 1, &scissor);
+
 	vkCmdBindPipeline(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, techniqueA->pipeline);
 
 	VkDeviceSize offsets = 0;

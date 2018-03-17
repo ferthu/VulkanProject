@@ -1164,14 +1164,14 @@ VkSampler createSampler(VkDevice device, VkFilter magFilter, VkFilter minFilter,
 void transition_RenderToPost(VkCommandBuffer cmdBuf, VkImage img, int srcQueueFamily, int dstQueueFamily)
 {
 	VkPipelineStageFlags sourceStage
-		= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;	// Src. stage was dependent during the output stage of the hardware pipe.
+		= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;	// Src. stage was dependent during the output stage of the hardware pipe.
 	VkPipelineStageFlags destinationStage
 		= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;		// Memory access req. synchronization during compute execution.
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 	barrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 	barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-	barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	barrier.srcAccessMask = 0;
 	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 	barrier.srcQueueFamilyIndex = srcQueueFamily;
 	barrier.dstQueueFamilyIndex = dstQueueFamily;
@@ -1189,13 +1189,13 @@ void transition_PostToPresent(VkCommandBuffer cmdBuf, VkImage img, int srcQueueF
 	VkPipelineStageFlags sourceStage
 		= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 	VkPipelineStageFlags destinationStage
-		= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		= VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 	VkImageMemoryBarrier barrier = {};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 	barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
 	barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 	barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-	barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	barrier.dstAccessMask = 0;
 	barrier.srcQueueFamilyIndex = srcQueueFamily;
 	barrier.dstQueueFamilyIndex = dstQueueFamily;
 	barrier.image = img;

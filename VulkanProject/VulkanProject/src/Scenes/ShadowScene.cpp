@@ -83,7 +83,7 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	else
 	{
 		SimpleMesh mesh, baked;
-		if (readObj("resource/cowparty.obj", mesh))
+		if (readObj("resource/Suzanne.obj", mesh))
 			std::cout << "Obj read successfull\n";
 		mesh.bake(SimpleMesh::BitFlag::NORMAL_BIT | SimpleMesh::TRIANGLE_ARRAY | SimpleMesh::POS_4_COMPONENT, baked);
 
@@ -285,6 +285,8 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 void ShadowScene::transfer()
 {
 
+	lightInfoBuffer->transferData(&lightInfo, sizeof(lightInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+	transformMatrixBuffer->transferData(&transformMatrix, sizeof(glm::mat4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 }
 
 void ShadowScene::frame(float dt)
@@ -292,15 +294,6 @@ void ShadowScene::frame(float dt)
 	static float counter = 0.0f;
 	counter += dt;
 	createCameraMatrix(counter);
-
-	VkCommandBuffer cmdBuf = beginSingleCommand(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].pool);
-	transformMatrixBuffer->setData(&transformMatrix, sizeof(glm::mat4), 0, _renderHandle->getDescriptorSetLayout(0), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-	endSingleCommand_Wait(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].queue, _renderHandle->queues[QueueType::MEM].pool, cmdBuf);
-
-	cmdBuf = beginSingleCommand(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].pool);
-	lightInfoBuffer->setData(&lightInfo, sizeof(lightInfo), 2, _renderHandle->getDescriptorSetLayout(2), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-	endSingleCommand_Wait(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].queue, _renderHandle->queues[QueueType::MEM].pool, cmdBuf);
-
 
 	VulkanRenderer::FrameInfo info = _renderHandle->beginCommandBuffer();
 
@@ -335,7 +328,7 @@ void ShadowScene::frame(float dt)
 	vkCmdEndRenderPass(info._buf);
 
 	// Image barrier transferring image layout
-	transition_DepthRead(info._buf, shadowMap->_imageHandle);
+	transition_DepthRead(info._buf, shadowMap->_imageHandle);	
 	
 	// Rendering pass
 	_renderHandle->beginRenderPass(info._buf);
@@ -370,7 +363,6 @@ void ShadowScene::post()
 	VulkanRenderer::FrameInfo info = _renderHandle->beginCompute();
 	transition_RenderToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
 
-
 	// Bind compute shader
 	techniqueBlurHorizontal->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
@@ -385,7 +377,7 @@ void ShadowScene::post()
 
 	// Finish
 	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
-	_renderHandle->submitCompute();
+	_renderHandle->submitCompute(0, true);
 }
 
 
@@ -496,6 +488,14 @@ void ShadowScene::defineShadowRenderPass(VkDevice device)
 	subpass.preserveAttachmentCount = 0;
 	subpass.pPreserveAttachments = nullptr;
 
+	VkSubpassDependency dependency = {};
+	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependency.dstSubpass = 0;
+	dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+	dependency.srcAccessMask = 0;
+	dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+	dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
 	VkRenderPassCreateInfo renderPassCreateInfo = {};
 	renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	renderPassCreateInfo.pNext = nullptr;
@@ -504,8 +504,9 @@ void ShadowScene::defineShadowRenderPass(VkDevice device)
 	renderPassCreateInfo.pAttachments = &attatchment;
 	renderPassCreateInfo.subpassCount = 1;
 	renderPassCreateInfo.pSubpasses = &subpass;
-	renderPassCreateInfo.dependencyCount = 0;
-	renderPassCreateInfo.pDependencies = nullptr;
+	renderPassCreateInfo.dependencyCount = 1;
+	renderPassCreateInfo.pDependencies = &dependency;
+
 
 	if (vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &shadowRenderPass) != VK_SUCCESS)
 		throw std::runtime_error("Failed to create shadow render pass");
