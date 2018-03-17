@@ -43,7 +43,7 @@ void TechniqueVulkan::createGraphicsPipeline(VkPipelineLayout layout, VkPipeline
 	VkPipelineShaderStageCreateInfo stages[2];
 	stages[0] = defineShaderStage(VK_SHADER_STAGE_VERTEX_BIT, _sHandle->vertexShader);
 	stages[1] = defineShaderStage(VK_SHADER_STAGE_FRAGMENT_BIT, _sHandle->fragmentShader);
-	
+
 	//
 	VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo =
 		defineInputAssembly(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
@@ -109,8 +109,10 @@ void TechniqueVulkan::createGraphicsPipeline(VkPipelineLayout layout, VkPipeline
 
 	VkResult err = vkCreateGraphicsPipelines(_renderHandle->getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
 
-	if (err != VK_SUCCESS)
+	if (err != VK_SUCCESS){
+		std::cout << "Failed to create graphics pipeline.\n";
 		throw std::runtime_error("Failed to create graphics pipeline.");
+	}
 }
 
 void TechniqueVulkan::createComputePipeline(VkPipelineLayout layout)

@@ -3,7 +3,7 @@ layout(location = 0) in vec3 normal;
 layout(location = 1) in vec4 worldPos;
 
 layout(set=1,binding=0) uniform sampler2DShadow shadowMap;
-layout(set=1,binding=2) uniform ToLight
+layout(set=2,binding=0) uniform ToLight
 {
 	mat4 toLight;
 	vec4 lightDir;

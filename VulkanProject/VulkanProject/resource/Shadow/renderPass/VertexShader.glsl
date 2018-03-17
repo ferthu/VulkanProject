@@ -2,7 +2,7 @@
 layout(location=0) in vec4 position;
 layout(location=1) in vec3 normal;
 
-layout(set=1,binding=1) uniform Transform
+layout(set=0,binding=0) uniform Transform
 {
 	mat4 transform;
 } t;
