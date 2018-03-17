@@ -836,7 +836,7 @@ VkAttachmentDescription defineFramebufShadowMap(VkFormat shadowMapFormat)
 	shadowMapAttach.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	shadowMapAttach.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	shadowMapAttach.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	shadowMapAttach.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	shadowMapAttach.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 	return shadowMapAttach;
 }
 
@@ -1218,7 +1218,7 @@ void transition_DepthRead(VkCommandBuffer cmdBuf, VkImage img, int srcQueueFamil
 	barrier.pNext = nullptr;
 	barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-	barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	barrier.srcQueueFamilyIndex = srcQueueFamily;
 	barrier.dstQueueFamilyIndex = dstQueueFamily;
