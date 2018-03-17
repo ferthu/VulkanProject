@@ -363,7 +363,6 @@ void ShadowScene::post()
 	VulkanRenderer::FrameInfo info = _renderHandle->beginCompute();
 	transition_RenderToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
 
-
 	// Bind compute shader
 	techniqueBlurHorizontal->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
