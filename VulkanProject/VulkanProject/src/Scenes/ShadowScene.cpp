@@ -83,7 +83,7 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	else
 	{
 		SimpleMesh mesh, baked;
-		if (readObj("resource/cowparty.obj", mesh))
+		if (readObj("resource/Suzanne.obj", mesh))
 			std::cout << "Obj read successfull\n";
 		mesh.bake(SimpleMesh::BitFlag::NORMAL_BIT | SimpleMesh::TRIANGLE_ARRAY | SimpleMesh::POS_4_COMPONENT, baked);
 
@@ -328,7 +328,7 @@ void ShadowScene::frame(float dt)
 	vkCmdEndRenderPass(info._buf);
 
 	// Image barrier transferring image layout
-	transition_DepthRead(info._buf, shadowMap->_imageHandle);
+	transition_DepthRead(info._buf, shadowMap->_imageHandle);	
 	
 	// Rendering pass
 	_renderHandle->beginRenderPass(info._buf);
@@ -377,7 +377,7 @@ void ShadowScene::post()
 
 	// Finish
 	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
-	_renderHandle->submitCompute();
+	_renderHandle->submitCompute(0, true);
 }
 
 
@@ -488,6 +488,14 @@ void ShadowScene::defineShadowRenderPass(VkDevice device)
 	subpass.preserveAttachmentCount = 0;
 	subpass.pPreserveAttachments = nullptr;
 
+	VkSubpassDependency dependency = {};
+	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependency.dstSubpass = 0;
+	dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+	dependency.srcAccessMask = 0;
+	dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+	dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
 	VkRenderPassCreateInfo renderPassCreateInfo = {};
 	renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	renderPassCreateInfo.pNext = nullptr;
@@ -496,8 +504,9 @@ void ShadowScene::defineShadowRenderPass(VkDevice device)
 	renderPassCreateInfo.pAttachments = &attatchment;
 	renderPassCreateInfo.subpassCount = 1;
 	renderPassCreateInfo.pSubpasses = &subpass;
-	renderPassCreateInfo.dependencyCount = 0;
-	renderPassCreateInfo.pDependencies = nullptr;
+	renderPassCreateInfo.dependencyCount = 1;
+	renderPassCreateInfo.pDependencies = &dependency;
+
 
 	if (vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &shadowRenderPass) != VK_SUCCESS)
 		throw std::runtime_error("Failed to create shadow render pass");
