@@ -41,7 +41,7 @@ private:
 	const uint32_t transformMatrixBindingSlot = 1;
 	const uint32_t clipToShadowMapMatrixBindingSlot = 2;
 
-	const uint32_t shadowMapSize = 1024;
+	const uint32_t shadowMapSize = 2048;
 
 	glm::mat4 shadowMappingMatrix;			// Contains all transformations done in the shadow mapping pass
 	ConstantBufferVulkan* shadowMappingMatrixBuffer;

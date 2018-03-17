@@ -49,8 +49,8 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 
 	glm::mat4 lightMatrix = glm::mat4(1.0f);
 	lightMatrix = rotationMatrix(glm::pi<float>() * 0.0f, glm::vec3(0, 1, 0)) * lightMatrix;
-	lightMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -4.0f)) * lightMatrix;
-	lightMatrix = orthographicMatrix(-4.0f, 4.0f, -4.0f, 4.0f, 0.1f, 10.0f) * lightMatrix;
+	lightMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -20.0f)) * lightMatrix;
+	lightMatrix = orthographicMatrix(-20.0f, 20.0f, -20.0f, 20.0f, 0.1f, 60.0f) * lightMatrix;
 
 	createCameraMatrix(0.0f);
 	shadowMappingMatrix = lightMatrix;
@@ -81,7 +81,7 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	else
 	{
 		SimpleMesh mesh, baked;
-		if (readObj("resource/Suzanne.obj", mesh))
+		if (readObj("resource/cowparty.obj", mesh))
 			std::cout << "Obj read successfull\n";
 		mesh.bake(SimpleMesh::BitFlag::NORMAL_BIT | SimpleMesh::TRIANGLE_ARRAY | SimpleMesh::POS_4_COMPONENT, baked);
 
@@ -636,9 +636,9 @@ void ShadowScene::createCameraMatrix(float time)
 {
 	glm::mat4 cameraMatrix = glm::mat4(1.0f);
 	glm::mat4 rot = rotationMatrix(glm::pi<float>() * 0.2f * sinf(time), glm::vec3(.0f, 1.0f, .0f));
-	glm::mat4 tra = glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f * sinf(time), 0.5f * sinf(time * 0.1f), -4.0f));
+	glm::mat4 tra = glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f * sinf(time), 0.5f * sinf(time * 0.1f), -30.0f));
 	glm::mat4 per = perspectiveMatrix(static_cast<float>(_renderHandle->getWidth()) / static_cast<float>(_renderHandle->getHeight()), 
-		1.0f, 0.1f, 10.0f);
+		1.0f, 0.1f, 60.0f);
 	//glm::mat4 per = orthographicMatrix(-4.0f, 4.0f, -4.0f, 4.0f, 0.1f, 10.0f) * cameraMatrix;
 
 	transformMatrix = per * tra * rot * cameraMatrix;

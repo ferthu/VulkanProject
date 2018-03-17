@@ -11,7 +11,7 @@ layout(set=1,binding=2) uniform ToLight
 
 layout(location = 0) out vec4 outColor;
 
-#define shadowMapSize 1024.0
+#define shadowMapSize 2048.0
 
 void main()
 {
