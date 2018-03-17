@@ -285,6 +285,8 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 void ShadowScene::transfer()
 {
 
+	lightInfoBuffer->transferData(&lightInfo, sizeof(lightInfo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+	transformMatrixBuffer->transferData(&transformMatrix, sizeof(glm::mat4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 }
 
 void ShadowScene::frame(float dt)
@@ -292,15 +294,6 @@ void ShadowScene::frame(float dt)
 	static float counter = 0.0f;
 	counter += dt;
 	createCameraMatrix(counter);
-
-	VkCommandBuffer cmdBuf = beginSingleCommand(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].pool);
-	transformMatrixBuffer->setData(&transformMatrix, sizeof(glm::mat4), 0, _renderHandle->getDescriptorSetLayout(0), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-	endSingleCommand_Wait(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].queue, _renderHandle->queues[QueueType::MEM].pool, cmdBuf);
-
-	cmdBuf = beginSingleCommand(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].pool);
-	lightInfoBuffer->setData(&lightInfo, sizeof(lightInfo), 2, _renderHandle->getDescriptorSetLayout(2), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-	endSingleCommand_Wait(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].queue, _renderHandle->queues[QueueType::MEM].pool, cmdBuf);
-
 
 	VulkanRenderer::FrameInfo info = _renderHandle->beginCommandBuffer();
 
