@@ -97,14 +97,20 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 
 	// Create shaders
 	depthPassShaders = new ShaderVulkan("depthPassShaders", handle);
-	depthPassShaders->setShader("resource/Shadow/depthPass/ShadowPassVertexShader.glsl", ShaderVulkan::ShaderType::VS);
-	std::string err;
-	depthPassShaders->compileMaterial(err);
-
 	renderPassShaders = new ShaderVulkan("renderPassShaders", handle);
+#ifdef COMPILE
+	depthPassShaders->setShader("resource/Shadow/depthPass/ShadowPassVertexShader.glsl", ShaderVulkan::ShaderType::VS);
 	renderPassShaders->setShader("resource/Shadow/renderPass/VertexShader.glsl", ShaderVulkan::ShaderType::VS);
 	renderPassShaders->setShader("resource/Shadow/renderPass/FragmentShader.glsl", ShaderVulkan::ShaderType::PS);
+#else
+	depthPassShaders->setShader("resource/tmp/ShadowPassVertexShader.spv", ShaderVulkan::ShaderType::VS);
+	renderPassShaders->setShader("resource/tmp/VertexShader.spv", ShaderVulkan::ShaderType::VS);
+	renderPassShaders->setShader("resource/tmp/FragmentShader.spv", ShaderVulkan::ShaderType::PS);
+#endif
+	std::string err;
+	depthPassShaders->compileMaterial(err);
 	renderPassShaders->compileMaterial(err);
+
 
 	// Create techniques
 	const uint32_t BUFFER_COUNT = 2;
@@ -261,12 +267,17 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	postLayout.construct(_renderHandle->getDevice());
 
 	// Gen. shaders
-	blurHorizontal = new ShaderVulkan("CopyCompute", _renderHandle);
+	blurHorizontal = new ShaderVulkan("HorizontalGauss", _renderHandle);
+	blurVertical = new ShaderVulkan("VerticalGauss", _renderHandle);
+#ifdef COMPILE
 	blurHorizontal->setShader("resource/Compute/GaussianHorizontal.glsl", ShaderVulkan::ShaderType::CS);
-	blurHorizontal->compileMaterial(err);
-
-	blurVertical = new ShaderVulkan("CopyCompute", _renderHandle);
 	blurVertical->setShader("resource/Compute/GaussianVertical.glsl", ShaderVulkan::ShaderType::CS);
+#else
+	blurHorizontal->setShader("resource/tmp/GaussianHorizontal.spv", ShaderVulkan::ShaderType::CS);
+	blurVertical->setShader("resource/tmp/GaussianVertical.spv", ShaderVulkan::ShaderType::CS);
+#endif
+
+	blurHorizontal->compileMaterial(err);
 	blurVertical->compileMaterial(err);
 
 	// Gen techniques
