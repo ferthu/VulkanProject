@@ -26,7 +26,11 @@ public:
 	{
 		MEM_LIMITED = 1,
 		MEM_LIMITED_ANIMATED = 2,
-		REG_LIMITED = 4
+		REG_LIMITED = 4,
+		MEM_25 = 8,
+		MEM_50 = 16,
+		MEM_75 = 32,
+		MEM_100 = 64
 	};
 	
 	ComputeExperiment(Mode mode = ASYNC, uint32_t shader = REG_LIMITED, uint32_t num_particles = 1024 * 512, float locality = 8);

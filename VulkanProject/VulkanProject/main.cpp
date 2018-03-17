@@ -15,13 +15,14 @@
 #undef main
 
 void updateWinTitle(VulkanRenderer *rend);
+void resetTime();
 void outPerfCounters(std::string params);
 
 static std::vector<double>	perfCounter;
 static double elapsedTime = 0.0;
 static double lastElapsedTime = 0.0;
 const double INIT_WAIT_TIMER = 100;
-const int MIN_SAMPLES = 0;								// = 0 if inf runtime
+const int MIN_SAMPLES = 500;								// = 0 if inf runtime
 const double RUN_DURATION = INIT_WAIT_TIMER + 1000.f;	//ms
 
 inline double square(double val) { return val * val; }
@@ -36,46 +37,64 @@ const std::string MODE_STR[] = {
 
 int main(int argc, const char* argv)
 {
-	VulkanRenderer renderer;
-	perfCounter.reserve(10000);
-	uint32_t particles = 1024*1024;
-	uint32_t dimW = 1024, dimH = 1024, pixels = dimW * dimH;
-	float locality = 8.f;
-	uint32_t mode = ComputeExperiment::Mode::SEQUENTIAL;
-	uint32_t shader = ComputeExperiment::MEM_LIMITED;
-	std::stringstream outString;
-	outString << "MEM_" << MODE_STR[mode] << ", " << pixels << ", " << particles << ", " << locality;
-	//renderer.initialize( new ComputeExperiment((ComputeExperiment::Mode)mode, shader, particles, locality), dimW, dimH, TRIPLE_BUFFERED); // 256, 256
-	//renderer.initialize(new ComputeScene(ComputeScene::Mode::Blur), 512, 512, 0);
-	//renderer.initialize(new TriangleScene(), 512, 512, 0);
-	renderer.initialize(new ShadowScene(), 800, 600, TRIPLE_BUFFERED);
+	uint32_t LOCALITY_TESTS = 14; 
+	uint32_t REGISTER_TEST = 1;
 
-	SDL_Event windowEvent;
-	while (true)
+	uint32_t ITERS = REGISTER_TEST;
+
+	for (uint32_t i = 0; i < MIN_SAMPLES == 0 ? 1 : ITERS; i++)
 	{
-		if (SDL_PollEvent(&windowEvent))
+		resetTime();
+		elapsedTime = 0.0;
+		lastElapsedTime = 0.0;
+		perfCounter.clear();
+
+		VulkanRenderer renderer;
+		perfCounter.reserve(10000);
+		uint32_t particles = 1024 * 1024;
+		uint32_t dimW = 1024, dimH = 1024, pixels = dimW * dimH;
+		float locality = 512.f / (std::pow(2.f, i));
+		uint32_t mode = ComputeExperiment::Mode::MULTI_QUEUE;
+		uint32_t shader = ComputeExperiment::MEM_LIMITED;
+		std::stringstream outString;
+		outString << "MEM_" << MODE_STR[mode] << ", " << pixels << ", " << particles << ", " << locality;
+		renderer.initialize(new ComputeExperiment((ComputeExperiment::Mode)mode, shader, particles, locality), dimW, dimH, TRIPLE_BUFFERED); // 256, 256
+		//renderer.initialize(new ComputeScene(ComputeScene::Mode::Blur), 512, 512, 0);
+		//renderer.initialize(new TriangleScene(), 512, 512, 0);
+		//renderer.initialize(new ShadowScene(), 800, 600, TRIPLE_BUFFERED);
+
+		SDL_Event windowEvent;
+		while (true)
 		{
-			if (windowEvent.type == SDL_QUIT) break;
-			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_ESCAPE) break;
+			if (SDL_PollEvent(&windowEvent))
+			{
+				if (windowEvent.type == SDL_QUIT) break;
+				if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_ESCAPE) break;
+			}
+			renderer.frame(static_cast<float>(elapsedTime - lastElapsedTime) / 1000.0f);
+			lastElapsedTime = elapsedTime;
+			updateWinTitle(&renderer);
+			if (MIN_SAMPLES != 0 && MIN_SAMPLES < perfCounter.size() && elapsedTime > RUN_DURATION)	break;
 		}
-		renderer.frame(static_cast<float>(elapsedTime - lastElapsedTime) / 1000.0f);
-		lastElapsedTime = elapsedTime;
-		updateWinTitle(&renderer);
-		if (MIN_SAMPLES != 0 && MIN_SAMPLES < perfCounter.size() && elapsedTime > RUN_DURATION)	break;
+		outPerfCounters(outString.str());
+		renderer.beginShutdown();
+		renderer.shutdown();
 	}
-	outPerfCounters(outString.str());
-	renderer.beginShutdown();
-	renderer.shutdown();
 }
 
 
+static Uint64 start = 0;
+static Uint64 last = 0;
 
+void resetTime()
+{
+	start = 0;
+	last = 0;
+}
 
 void updateWinTitle(VulkanRenderer *rend)
 {
 #define WINDOW_SIZE 10
-	static Uint64 start = 0;
-	static Uint64 last = 0;
 	static double avg[WINDOW_SIZE] = { 0.0 };
 	static double lastSum = 10.0;
 	static int loop = 0;

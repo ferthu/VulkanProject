@@ -216,7 +216,7 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	std::vector<VkSurfaceFormatKHR> formats;
 	ALLOC_QUERY_ASSERT(result, vkGetPhysicalDeviceSurfaceFormatsKHR, formats, physicalDevice, windowSurface);
 	swapchainFormat = formats[0]; // Just select the first available format
-
+#define NO_VSYNC
 	// Choose the mode for the swap chain that determines how the frame buffers are swapped.
 	VkPresentModeKHR presentModePref[] =
 	{

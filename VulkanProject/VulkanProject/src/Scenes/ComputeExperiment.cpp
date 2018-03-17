@@ -90,7 +90,18 @@ void ComputeExperiment::initialize(VulkanRenderer *handle)
 #else
 	compSmallOp->setShader("resource/tmp/ComputeSimple.spv", ShaderVulkan::ShaderType::CS);
 	if (hasFlag(shaderMode, ShaderModeBit::MEM_LIMITED))
-		compShader->setShader("resource/tmp/ComputeMemLimited.spv", ShaderVulkan::ShaderType::CS);
+	{
+
+		if (hasFlag(shaderMode, ShaderModeBit::MEM_100))
+			compShader->setShader("resource/tmp/ComputeMemLimited100.spv", ShaderVulkan::ShaderType::CS);
+		else if (hasFlag(shaderMode, ShaderModeBit::MEM_75))
+			compShader->setShader("resource/tmp/ComputeMemLimited75.spv", ShaderVulkan::ShaderType::CS);
+		else if (hasFlag(shaderMode, ShaderModeBit::MEM_25))
+			compShader->setShader("resource/tmp/ComputeMemLimited25.spv", ShaderVulkan::ShaderType::CS);
+		else // MEM_50
+			compShader->setShader("resource/tmp/ComputeMemLimited.spv", ShaderVulkan::ShaderType::CS);
+
+	}
 	else
 		compShader->setShader("resource/tmp/ComputeRegLimited.spv", ShaderVulkan::ShaderType::CS);
 #endif
