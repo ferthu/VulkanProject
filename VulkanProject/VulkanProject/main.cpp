@@ -22,7 +22,7 @@ static std::vector<double>	perfCounter;
 static double elapsedTime = 0.0;
 static double lastElapsedTime = 0.0;
 const double INIT_WAIT_TIMER = 100;
-const int MIN_SAMPLES = 500;								// = 0 if inf runtime
+const int MIN_SAMPLES = 0;								// = 0 if inf runtime, sampling: 500
 const double RUN_DURATION = INIT_WAIT_TIMER + 1000.f;	//ms
 
 inline double square(double val) { return val * val; }
@@ -37,12 +37,12 @@ const std::string MODE_STR[] = {
 
 int main(int argc, const char* argv)
 {
+	uint32_t RUN_ONCE = 1;
 	uint32_t LOCALITY_TESTS = 14; 
-	uint32_t REGISTER_TEST = 1;
 
-	uint32_t ITERS = REGISTER_TEST;
+	uint32_t ITERS = RUN_ONCE;
 
-	for (uint32_t i = 0; i < MIN_SAMPLES == 0 ? 1 : ITERS; i++)
+	for (uint32_t i = 0; i < (MIN_SAMPLES == 0 ? 1 : ITERS); i++)
 	{
 		resetTime();
 		elapsedTime = 0.0;
