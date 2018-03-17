@@ -47,8 +47,8 @@ int main(int argc, const char* argv)
 	outString << "MEM_" << MODE_STR[mode] << ", " << pixels << ", " << particles << ", " << locality;
 	//renderer.initialize( new ComputeExperiment((ComputeExperiment::Mode)mode, shader, particles, locality), dimW, dimH, TRIPLE_BUFFERED); // 256, 256
 	//renderer.initialize(new ComputeScene(ComputeScene::Mode::Blur), 512, 512, 0);
-	renderer.initialize(new TriangleScene(), 512, 512, 0);
-	//renderer.initialize(new ShadowScene(), 800, 600, TRIPLE_BUFFERED);
+	//renderer.initialize(new TriangleScene(), 512, 512, 0);
+	renderer.initialize(new ShadowScene(), 800, 600, TRIPLE_BUFFERED);
 
 	SDL_Event windowEvent;
 	while (true)
