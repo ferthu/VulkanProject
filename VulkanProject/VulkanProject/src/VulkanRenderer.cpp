@@ -687,9 +687,7 @@ void VulkanRenderer::transferBufferData(VkBuffer buffer, const void* data, size_
 	bufferCopyRegion.dstOffset = offset;
 	bufferCopyRegion.size = size;
 
-	VkCommandBuffer cmdBuf = beginSingleCommand(device, queues[QueueType::MEM].pool);
-	vkCmdCopyBuffer(cmdBuf, stagingBuffer, buffer, 1, &bufferCopyRegion);
-	endSingleCommand_Wait(getDevice(), queues[QueueType::MEM].queue, queues[QueueType::MEM].pool, cmdBuf);
+	vkCmdCopyBuffer(_transferCmd[getTransferIndex()], stagingBuffer, buffer, 1, &bufferCopyRegion);
 }
 
 void VulkanRenderer::transferBufferInitial(VkBuffer buffer, const void* data, size_t size, size_t offset)
