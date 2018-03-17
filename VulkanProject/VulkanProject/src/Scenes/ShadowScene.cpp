@@ -310,12 +310,12 @@ void ShadowScene::frame(float dt)
 	clearValue.depthStencil = { 1.0f, 0 };
 	renderPassInfo.clearValueCount = 1;
 	renderPassInfo.pClearValues = &clearValue;
-
+	VkRect2D scissor;
+	
 	vkCmdBeginRenderPass(info._buf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 	vkCmdBindPipeline(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, depthPassTechnique->pipeline);
 	vkCmdSetViewport(info._buf, 0, 1, &shadowMapViewport);
-	VkRect2D scissor;
 	scissor.offset = { 0, 0 };
 	scissor.extent = { shadowMapSize, shadowMapSize };
 	vkCmdSetScissor(info._buf, 0, 1, &scissor);
@@ -348,10 +348,9 @@ void ShadowScene::frame(float dt)
 
 	_renderHandle->endRenderPass();
 	// Submit
-	transition_DepthWrite(info._buf, shadowMap->_imageHandle);
 	_renderHandle->submitFramePass();
 
-	post();
+	//post();
 
 	_renderHandle->present();
 }
@@ -361,6 +360,7 @@ void ShadowScene::post()
 {
 
 	VulkanRenderer::FrameInfo info = _renderHandle->beginCompute();
+	transition_DepthWrite(info._buf, shadowMap->_imageHandle);
 	transition_RenderToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
 
 	// Bind compute shader

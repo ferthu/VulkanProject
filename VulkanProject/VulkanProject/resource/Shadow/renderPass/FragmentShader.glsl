@@ -35,4 +35,5 @@ void main()
 	float rangeAttenuation = max(1.0 - lightSpacePos.z, 0.3);
 
 	outColor = colorFromLight * angleAttenuation * rangeAttenuation + vec4(0.05, 0.03, 0.03, 1.0) * max(dot(normal, vec3(1,0,0)), 0) + vec4(0.05, 0.03, 0.03, 1.0);
+	//outColor = vec4(1) * texture(shadowMap, vec3(samplePos.x, samplePos.y, 0), 0.1f);
 }

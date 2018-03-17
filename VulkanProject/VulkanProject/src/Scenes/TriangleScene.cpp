@@ -20,8 +20,13 @@ void TriangleScene::initialize(VulkanRenderer *handle)
 {
 	Scene::initialize(handle);
 	triShader = new ShaderVulkan("testShaders", _renderHandle);
-	triShader->setShader("resource/trishader/VertexShader.glsl", ShaderVulkan::ShaderType::VS);
-	triShader->setShader("resource/trishader/FragmentShader.glsl", ShaderVulkan::ShaderType::PS);
+#ifdef COMPILE
+	triShader->setShader("resource/trishader/TriVertex.glsl", ShaderVulkan::ShaderType::VS);
+	triShader->setShader("resource/trishader/TriFragment.glsl", ShaderVulkan::ShaderType::PS);
+#else
+	triShader->setShader("resource/tmp/TriVertex.spv", ShaderVulkan::ShaderType::VS);
+	triShader->setShader("resource/tmp/TriFragment.spv", ShaderVulkan::ShaderType::PS);
+#endif
 	std::string err;
 	triShader->compileMaterial(err);
 
