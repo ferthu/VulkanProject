@@ -246,12 +246,16 @@ void initBB(float* bb, float* v)
 						{
 							for (int ii = i; ii < i+3; ii++)
 							{
-								mesh._face_ind.push_back(v[ii] - 1);
-								if (num_tex == num_vert)	mesh._face_uv.push_back(t[ii] - 1);
-								if (num_norm == num_vert)	mesh._face_nor.push_back(n[ii] - 1);
 								assert(v[ii] > 0);
-								assert(t[ii] > 0);
-								assert(n[ii] > 0);
+								mesh._face_ind.push_back(v[ii] - 1);
+								if (num_tex == num_vert) {
+									assert(t[ii] > 0);
+									mesh._face_uv.push_back(t[ii] - 1);
+								}
+								if (num_norm == num_vert) {
+									assert(n[ii] > 0);
+									mesh._face_nor.push_back(n[ii] - 1);
+								}
 							}
 						}
 					}
