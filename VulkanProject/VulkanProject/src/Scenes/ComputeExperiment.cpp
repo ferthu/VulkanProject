@@ -215,8 +215,8 @@ void ComputeExperiment::frame(float dt)
 	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
 	if (hasFlag(shaderMode, ShaderModeBit::MEM_LIMITED))
 	{
-		//postParams->bind(info._buf, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
-		//readImg->bind(info._buf, 2, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
+		postParams->bind(info._buf, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
+		readImg->bind(info._buf, 2, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
 	}
 	// Dispatch
 	uint32_t dimX = _renderHandle->getWidth() / 16;

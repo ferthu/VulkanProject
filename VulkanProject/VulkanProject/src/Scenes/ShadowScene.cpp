@@ -83,7 +83,7 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	else
 	{
 		SimpleMesh mesh, baked;
-		if (readObj("resource/Suzanne.obj", mesh))
+		if (readObj("resource/cowparty.obj", mesh))
 			std::cout << "Obj read successfull\n";
 		mesh.bake(SimpleMesh::BitFlag::NORMAL_BIT | SimpleMesh::TRIANGLE_ARRAY | SimpleMesh::POS_4_COMPONENT, baked);
 
@@ -113,7 +113,7 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	depthPassShaders->compileMaterial(err);
 	renderPassShaders->compileMaterial(err);
 
-	shadowMap->attachBindPoint(0, shadowPipeLayout[0]);
+	shadowMap->attachBindPoint(1, _renderHandle->getDescriptorSetLayout(1));
 
 	// Create techniques
 	const uint32_t BUFFER_COUNT = 2;
@@ -132,7 +132,7 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 		defineVertexBufferBindings(vertexBufferBindings, BUFFER_COUNT, vertexAttributes, ATTRIBUTE_COUNT);
 
 	renderPassTechnique = new TechniqueVulkan(_renderHandle, renderPassShaders, _renderHandle->getFramePass(), _renderHandle->getFramePassLayout(), vertexBindings);
-	depthPassTechnique = new TechniqueVulkan(_renderHandle, depthPassShaders, shadowRenderPass, _renderHandle->getFramePassLayout(), vertexBindings);
+	depthPassTechnique = new TechniqueVulkan(_renderHandle, depthPassShaders, shadowRenderPass, shadowPipeLayout._layout, vertexBindings);
 
 	// Define viewport
 	shadowMapViewport.x = 0;
@@ -294,11 +294,11 @@ void ShadowScene::frame(float dt)
 	createCameraMatrix(counter);
 
 	VkCommandBuffer cmdBuf = beginSingleCommand(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].pool);
-	transformMatrixBuffer->setData(&transformMatrix, sizeof(glm::mat4), 1, _renderHandle->getDescriptorSetLayout(0), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+	transformMatrixBuffer->setData(&transformMatrix, sizeof(glm::mat4), 0, _renderHandle->getDescriptorSetLayout(0), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 	endSingleCommand_Wait(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].queue, _renderHandle->queues[QueueType::MEM].pool, cmdBuf);
 
 	cmdBuf = beginSingleCommand(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].pool);
-	lightInfoBuffer->setData(&lightInfo, sizeof(lightInfo), 1, _renderHandle->getDescriptorSetLayout(2), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+	lightInfoBuffer->setData(&lightInfo, sizeof(lightInfo), 2, _renderHandle->getDescriptorSetLayout(2), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 	endSingleCommand_Wait(_renderHandle->getDevice(), _renderHandle->queues[QueueType::MEM].queue, _renderHandle->queues[QueueType::MEM].pool, cmdBuf);
 
 
@@ -395,15 +395,16 @@ void ShadowScene::defineDescriptorLayout(VkDevice device, std::vector<VkDescript
 	
 	// Shadow map
 	VkDescriptorSetLayoutBinding binding;
-	writeLayoutBinding(binding, shadowMapBindingSlot, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-	layout[0] = createDescriptorLayout(device, &binding, 1);
 
 	// transformMatrix
-	writeLayoutBinding(binding, transformMatrixBindingSlot, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
+	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
+	layout[0] = createDescriptorLayout(device, &binding, 1);
+
+	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 	layout[1] = createDescriptorLayout(device, &binding, 1);
 	
 	// clipSpaceToShadowMapMatrix
-	writeLayoutBinding(binding, clipToShadowMapMatrixBindingSlot, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
+	writeLayoutBinding(binding, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT);
 	layout[2] = createDescriptorLayout(device, &binding, 1);
 }
 
@@ -530,10 +531,10 @@ void ShadowScene::createBuffers()
 	shadowMappingMatrixBuffer->setData(&shadowMappingMatrix, sizeof(glm::mat4), 0);
 
 	transformMatrixBuffer = new ConstantDoubleBufferVulkan(_renderHandle);
-	transformMatrixBuffer->setData(&transformMatrix, sizeof(glm::mat4), 1, _renderHandle->getDescriptorSetLayout(0), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+	transformMatrixBuffer->setData(&transformMatrix, sizeof(glm::mat4), 0, _renderHandle->getDescriptorSetLayout(0), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
 	lightInfoBuffer = new ConstantDoubleBufferVulkan(_renderHandle);
-	lightInfoBuffer->setData(&lightInfo, sizeof(lightInfo), 1, _renderHandle->getDescriptorSetLayout(2));
+	lightInfoBuffer->setData(&lightInfo, sizeof(lightInfo), 2, _renderHandle->getDescriptorSetLayout(2));
 }
 
 glm::mat4 ShadowScene::rotationMatrix(float angle, glm::vec3 const& axis)

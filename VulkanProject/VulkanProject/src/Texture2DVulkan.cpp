@@ -108,6 +108,8 @@ void Texture2DVulkan::createShadowMap(uint32_t height, uint32_t width, VkFormat 
 	depthStencilView.image = _imageHandle;
 	if (vkCreateImageView(_renderHandle->getDevice(), &depthStencilView, nullptr, &imageInfo.imageView) != VK_SUCCESS)
 		throw std::runtime_error("Failed to create shadow map view");
+
+	imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 }
 
 
