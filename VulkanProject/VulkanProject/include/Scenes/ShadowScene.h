@@ -48,7 +48,7 @@ private:
 
 
 	glm::mat4 transformMatrix;				// Contains all transformations done on the geometry in the rendering pass
-	ConstantBufferVulkan* transformMatrixBuffer;
+	ConstantDoubleBufferVulkan* transformMatrixBuffer;
 
 	struct LightInfo
 	{
@@ -56,7 +56,7 @@ private:
 		glm::vec4 lightDirection;
 	};
 	LightInfo lightInfo;	// Transfoms a coordinate in clip space to a coordinate on shadow map
-	ConstantBufferVulkan* lightInfoBuffer;
+	ConstantDoubleBufferVulkan* lightInfoBuffer;
 
 	// Positions and normals of the triangles to render
 	VertexBufferVulkan* positionBuffer;
@@ -80,7 +80,7 @@ private:
 	VkDescriptorSet shadowPassDescriptorSet;
 	VkDescriptorSet renderPassDescriptorSet;
 
-	vk::LayoutConstruct pipelineLayoutConstruct;
+	vk::LayoutConstruct shadowPipeLayout;
 
 	VkDescriptorPool desciptorPool;
 
