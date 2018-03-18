@@ -83,7 +83,7 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	else
 	{
 		SimpleMesh mesh, baked;
-		if (readObj("resource/Suzanne.obj", mesh))
+		if (readObj("resource/cowparty.obj", mesh))
 			std::cout << "Obj read successfull\n";
 		mesh.bake(SimpleMesh::BitFlag::NORMAL_BIT | SimpleMesh::TRIANGLE_ARRAY | SimpleMesh::POS_4_COMPONENT, baked);
 
@@ -350,7 +350,7 @@ void ShadowScene::frame(float dt)
 	// Submit
 	_renderHandle->submitFramePass();
 
-	//post();
+	post();
 
 	_renderHandle->present();
 }
