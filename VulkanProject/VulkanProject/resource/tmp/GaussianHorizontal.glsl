@@ -1,7 +1,6 @@
 #version 450
 layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 layout(Rgba8, set=0, binding = 0) uniform image2D img;
-const uint IMG_WIDTH = 1024;
 
 //const uint H_DIM = 5;
 //float conv[H_DIM+1] = {0.39905, 0.242036, 0.054, 0.004433};
@@ -19,13 +18,13 @@ uint divCeil(uint numer, uint denom)
 //Index for the shared array
 uint sharedInd() { return gl_LocalInvocationID.x + H_DIM; }
 
-void fetchData(uint index)
+void fetchData(uint index, uint imgWidth)
 {
     // Fetch data (interval + overlap end)
-    s_mem[sharedInd()].bgr = imageLoad(img, ivec2(index, gl_WorkGroupID.y)).rgb;
+    s_mem[sharedInd()].bgr = imageLoad(img, ivec2(min(index, imgWidth-1), gl_WorkGroupID.y)).rgb;
     if(gl_LocalInvocationID.x < H_DIM)
       s_mem[sharedInd() + gl_WorkGroupSize.x].bgr =
-        imageLoad(img, ivec2(index + gl_WorkGroupSize.x, gl_WorkGroupID.y)).rgb;
+        imageLoad(img, ivec2(min(index + gl_WorkGroupSize.x, imgWidth-1), gl_WorkGroupID.y)).rgb;
 }
 
 uint calcIndex(uint iter)
@@ -35,28 +34,28 @@ uint calcIndex(uint iter)
 
 void main() {
 
+  ivec2 imgDim = imageSize(img);
   uint s_ind = sharedInd();
-  uint iters = divCeil(IMG_WIDTH, gl_WorkGroupSize.x);
+  uint iters = divCeil(imgDim.x, gl_WorkGroupSize.x);
   for(uint i = 0; i < iters; i++)
   {
     // Fetch data
     uint index =  calcIndex(i);
-    fetchData(index);
+    fetchData(index, imgDim.x);
     if(i == 0 && gl_LocalInvocationID.x < H_DIM) // first iter is out of bounds!..
       s_mem[gl_LocalInvocationID.x] = s_mem[H_DIM];
     // Sync. memory access
-    memoryBarrierShared();
     barrier();
 
     // Blur
-    vec3 sum = conv[0] * s_mem[s_ind];
+    vec3 sum = s_mem[s_ind-4] *  conv[0];
     for(uint ii = 1; ii < H_DIM + 1; ii++)
       sum += conv[ii] * (s_mem[s_ind + ii] + s_mem[s_ind - ii]);
     // Output result
     imageStore(img, ivec2(index, gl_WorkGroupID.y), vec4(sum.rgb, 1.f));
     barrier(); // Sync. before loading next
     if(gl_LocalInvocationID.x < H_DIM) // initial overlap
-      s_mem[gl_LocalInvocationID.x] = s_mem[s_ind + gl_WorkGroupSize.x];
+      s_mem[gl_LocalInvocationID.x] = s_mem[gl_LocalInvocationID.x + gl_WorkGroupSize.x];
     barrier();
   }
 }

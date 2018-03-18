@@ -174,13 +174,13 @@ void ComputeScene::postBlur(VulkanRenderer::FrameInfo info)
 	techniqueBlurHorizontal->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
 	// Dispatch
-	vkCmdDispatch(info._buf, 1, 512, 1);
+	vkCmdDispatch(info._buf, 1, _renderHandle->getHeight(), 1);
 
 
 	// Bind compute shader
 	techniqueBlurVertical->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	// Dispatch
-	vkCmdDispatch(info._buf, 1, 512, 1);
+	vkCmdDispatch(info._buf, 1, _renderHandle->getWidth(), 1);
 }
 
 void ComputeScene::transfer()
