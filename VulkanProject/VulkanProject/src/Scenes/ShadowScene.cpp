@@ -7,9 +7,10 @@
 #define OBJ_READER_SIMPLE
 #include "Stuff/ObjReaderSimple.h"
 
-ShadowScene::ShadowScene()
+ShadowScene::ShadowScene(FrameType frameType)
 {
-
+	this->frameType = frameType;
+	firstFrame = true;
 }
 
 ShadowScene::~ShadowScene()
@@ -280,6 +281,13 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 		writeDescriptorStruct_IMG_STORAGE(writeInfo[i], swapChainImgDesc[i], 0, 0, 1, imgInfo + i);
 	}
 	vkUpdateDescriptorSets(_renderHandle->getDevice(), (uint32_t)swapChainImgDesc.size(), writeInfo, 0, nullptr);
+
+	VkDevice device = _renderHandle->getDevice();
+
+	depthCommandBuf[0] = allocateCmdBuf(device, _renderHandle->queues[QueueType::GRAPHIC].pool);
+	depthCommandBuf[1] = allocateCmdBuf(device, _renderHandle->queues[QueueType::GRAPHIC].pool);
+	depthFence[0] = createFence(device, true);
+	depthFence[1] = createFence(device, true);
 }
 
 void ShadowScene::transfer()
@@ -290,6 +298,22 @@ void ShadowScene::transfer()
 }
 
 void ShadowScene::frame(float dt)
+{
+	switch (frameType)
+	{
+	case STANDARD:
+		frame_standard(dt);
+		break;
+	case SINGLE_COMMAND_BUFFER:
+		frame_single_cmdbuf(dt);
+		break;
+	case ASYNC:
+		frame_async(dt);
+		break;
+	}
+}
+
+void ShadowScene::frame_standard(float dt)
 {
 	static float counter = 0.0f;
 	counter += dt;
@@ -311,7 +335,7 @@ void ShadowScene::frame(float dt)
 	renderPassInfo.clearValueCount = 1;
 	renderPassInfo.pClearValues = &clearValue;
 	VkRect2D scissor;
-	
+
 	vkCmdBeginRenderPass(info._buf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 	vkCmdBindPipeline(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, depthPassTechnique->pipeline);
@@ -328,8 +352,8 @@ void ShadowScene::frame(float dt)
 	vkCmdEndRenderPass(info._buf);
 
 	// Image barrier transferring image layout
-	transition_DepthRead(info._buf, shadowMap->_imageHandle);	
-	
+	transition_DepthRead(info._buf, shadowMap->_imageHandle);
+
 	// Rendering pass
 	_renderHandle->beginRenderPass(info._buf);
 	vkCmdBindPipeline(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, renderPassTechnique->pipeline);
@@ -350,15 +374,230 @@ void ShadowScene::frame(float dt)
 	// Submit
 	_renderHandle->submitFramePass();
 
-	post();
+	post_standard();
 
 	_renderHandle->present();
 }
 
-
-void ShadowScene::post()
+void ShadowScene::frame_single_cmdbuf(float dt)
 {
+	static float counter = 0.0f;
+	counter += dt;
+	createCameraMatrix(counter);
 
+	VulkanRenderer::FrameInfo info = _renderHandle->beginGraphicsAndComputeCommandBuffer();
+
+	// Shadow map pass
+	VkRenderPassBeginInfo renderPassInfo = {};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderPassInfo.renderPass = shadowRenderPass;
+	renderPassInfo.framebuffer = shadowFramebuffer;
+	renderPassInfo.renderArea.offset = { 0, 0 };
+	renderPassInfo.renderArea.extent.height = shadowMapSize;
+	renderPassInfo.renderArea.extent.width = shadowMapSize;
+	// Clear params
+	VkClearValue clearValue;
+	clearValue.depthStencil = { 1.0f, 0 };
+	renderPassInfo.clearValueCount = 1;
+	renderPassInfo.pClearValues = &clearValue;
+	VkRect2D scissor;
+
+	vkCmdBeginRenderPass(info._buf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	vkCmdBindPipeline(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, depthPassTechnique->pipeline);
+	vkCmdSetViewport(info._buf, 0, 1, &shadowMapViewport);
+	scissor.offset = { 0, 0 };
+	scissor.extent = { shadowMapSize, shadowMapSize };
+	vkCmdSetScissor(info._buf, 0, 1, &scissor);
+	shadowMappingMatrixBuffer->bind(info._buf, _renderHandle->getFramePassLayout());
+	//vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowPipeLayout._layout, 0, 1, &shadowPassDescriptorSet, 0, nullptr);
+
+	positionBufferBinding.bind(info._buf, 0);
+	normalBufferBinding.bind(info._buf, 1);
+	vkCmdDraw(info._buf, positionBufferBinding.numElements, 1, 0, 0);
+	vkCmdEndRenderPass(info._buf);
+
+	// Image barrier transferring image layout
+	transition_DepthRead(info._buf, shadowMap->_imageHandle);
+
+	// Rendering pass
+	_renderHandle->beginRenderPass(info._buf);
+	vkCmdBindPipeline(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, renderPassTechnique->pipeline);
+	VkViewport normalViewport = _renderHandle->getViewport();
+	vkCmdSetViewport(info._buf, 0, 1, &normalViewport);
+	scissor.extent = { _renderHandle->getWidth(), _renderHandle->getHeight() };
+	vkCmdSetScissor(info._buf, 0, 1, &scissor);
+
+	//Bind stuff
+	lightInfoBuffer->bind(info._buf, _renderHandle->getFramePassLayout(), VK_PIPELINE_BIND_POINT_GRAPHICS);
+	shadowMap->bind(info._buf, 1, _renderHandle->getFramePassLayout());
+	transformMatrixBuffer->bind(info._buf, _renderHandle->getFramePassLayout());
+	//vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, _renderHandle->getFramePassLayout(), 1, 1, &renderPassDescriptorSet, 0, nullptr);
+
+	vkCmdDraw(info._buf, positionBufferBinding.numElements, 1, 0, 0);
+
+	_renderHandle->endGraphicsAndComputeRenderPass();
+	// Submit
+
+	transition_DepthWrite(info._buf, shadowMap->_imageHandle);
+	transition_RenderToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
+
+	// Bind compute shader
+	techniqueBlurHorizontal->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
+	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
+	// Dispatch
+	vkCmdDispatch(info._buf, 1, 512, 1);
+
+
+	// Bind compute shader
+	techniqueBlurVertical->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
+	// Dispatch
+	vkCmdDispatch(info._buf, 1, 512, 1);
+
+	// Finish
+	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
+	_renderHandle->submitGraphicsAndCompute();
+
+	_renderHandle->present();
+}
+
+void ShadowScene::frame_async(float dt)
+{
+	VulkanRenderer::FrameInfo info = _renderHandle->beginCommandBuffer();
+	
+	if (!firstFrame)
+	{
+		// Image barrier transferring image layout
+		transition_DepthRead(info._buf, shadowMap->_imageHandle);
+
+		// Rendering pass
+		_renderHandle->beginRenderPass(info._buf);
+		vkCmdBindPipeline(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, renderPassTechnique->pipeline);
+		VkViewport normalViewport = _renderHandle->getViewport();
+		vkCmdSetViewport(info._buf, 0, 1, &normalViewport);
+		VkRect2D scissor;
+		scissor.offset = { 0, 0 };
+		scissor.extent = { _renderHandle->getWidth(), _renderHandle->getHeight() };
+		vkCmdSetScissor(info._buf, 0, 1, &scissor);
+
+		//Bind stuff
+		lightInfoBuffer->bind(info._buf, _renderHandle->getFramePassLayout(), VK_PIPELINE_BIND_POINT_GRAPHICS);
+		shadowMap->bind(info._buf, 1, _renderHandle->getFramePassLayout());
+		transformMatrixBuffer->bind(info._buf, _renderHandle->getFramePassLayout());
+		//vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_GRAPHICS, _renderHandle->getFramePassLayout(), 1, 1, &renderPassDescriptorSet, 0, nullptr);
+
+		positionBufferBinding.bind(info._buf, 0);
+		normalBufferBinding.bind(info._buf, 1);
+		vkCmdDraw(info._buf, positionBufferBinding.numElements, 1, 0, 0);
+
+		_renderHandle->endRenderPass();
+		// Image barrier transferring image layout
+		transition_DepthWrite(info._buf, shadowMap->_imageHandle);
+
+	}
+	// Depth pass
+	static float counter = 0.0f;
+	counter += dt;
+	createCameraMatrix(counter);
+
+	// Submit
+	_renderHandle->submitFramePass();
+
+	// Post
+	if (!firstFrame)
+		async_post(dt);
+	async_depthBuffer(dt);
+
+	_renderHandle->present(firstFrame);
+
+	firstFrame = false;
+}
+
+void ShadowScene::async_post(float dt)
+{
+	// Post
+	VulkanRenderer::FrameInfo info = _renderHandle->beginCompute(0);
+	transition_RenderToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
+
+	// Bind compute shader
+	techniqueBlurHorizontal->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
+	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
+	// Dispatch
+	vkCmdDispatch(info._buf, 1, _renderHandle->getHeight(), 1);
+
+	serializeCommandBuffer(info._buf);
+	// Bind compute shader
+	techniqueBlurVertical->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
+	// Dispatch
+	vkCmdDispatch(info._buf, 1, _renderHandle->getWidth(), 1);
+
+	// Finish
+	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
+	_renderHandle->submitCompute(0, true);
+}
+
+void ShadowScene::async_depthBuffer(float dt)
+{
+	VkCommandBuffer cmdBuf = depthCommandBuf[_renderHandle->getFrameIndex()];
+	waitFence(_renderHandle->getDevice(), depthFence[_renderHandle->getFrameIndex()]);
+	VkResult err = vkResetCommandBuffer(cmdBuf, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+	if (err)
+		std::cout << "Command buff reset err\n";
+	// Begin recording frame commands
+	beginCmdBuf(cmdBuf, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	// Shadow map pass
+	VkRenderPassBeginInfo renderPassInfo = {};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderPassInfo.renderPass = shadowRenderPass;
+	renderPassInfo.framebuffer = shadowFramebuffer;
+	renderPassInfo.renderArea.offset = { 0, 0 };
+	renderPassInfo.renderArea.extent.height = shadowMapSize;
+	renderPassInfo.renderArea.extent.width = shadowMapSize;
+	// Clear params
+	VkClearValue clearValue;
+	clearValue.depthStencil = { 1.0f, 0 };
+	renderPassInfo.clearValueCount = 1;
+	renderPassInfo.pClearValues = &clearValue;
+
+	vkCmdBeginRenderPass(cmdBuf, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, depthPassTechnique->pipeline);
+	vkCmdSetViewport(cmdBuf, 0, 1, &shadowMapViewport);
+	VkRect2D scissor;
+	scissor.offset = { 0, 0 };
+	scissor.extent = { shadowMapSize, shadowMapSize };
+	vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
+	shadowMappingMatrixBuffer->bind(cmdBuf, _renderHandle->getFramePassLayout());
+	//vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, shadowPipeLayout._layout, 0, 1, &shadowPassDescriptorSet, 0, nullptr);
+
+	positionBufferBinding.bind(cmdBuf, 0);
+	normalBufferBinding.bind(cmdBuf, 1);
+	vkCmdDraw(cmdBuf, positionBufferBinding.numElements, 1, 0, 0);
+	vkCmdEndRenderPass(cmdBuf);
+
+	if (vkEndCommandBuffer(cmdBuf) != VK_SUCCESS) {
+		throw std::runtime_error("failed to record command buffer!");
+	}
+
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT };
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.waitSemaphoreCount = 0;
+	submitInfo.pWaitSemaphores = NULL;
+	submitInfo.pWaitDstStageMask = waitStages;	// Mask stage where related semaphore is waited for.
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &cmdBuf;
+	submitInfo.signalSemaphoreCount = 0;
+	submitInfo.pSignalSemaphores = NULL;
+	err = vkQueueSubmit(_renderHandle->queues[QueueType::GRAPHIC].queue, 1, &submitInfo, depthFence[_renderHandle->getFrameIndex()]);
+	if (err != VK_SUCCESS) {
+		throw std::runtime_error("Failed to submit draw command buffer!");
+	}
+}
+
+
+void ShadowScene::post_standard()
+{
 	VulkanRenderer::FrameInfo info = _renderHandle->beginCompute();
 	transition_DepthWrite(info._buf, shadowMap->_imageHandle);
 	transition_RenderToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));

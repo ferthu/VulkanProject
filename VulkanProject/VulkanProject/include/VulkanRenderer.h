@@ -68,7 +68,7 @@ public:
 
 	int initialize(Scene *scene, unsigned int width, unsigned int height, uint32_t BIT_FLAGS);
 	void frame(float dt);
-	void present();
+	void present(bool skipPresenting = false);
 
 	struct FrameInfo
 	{
@@ -84,9 +84,14 @@ public:
 	void beginRenderPass(VkCommandBuffer cmdBuf, VkFramebuffer* frameBuffer = NULL);
 	void endRenderPass();
 
+	FrameInfo beginGraphicsAndComputeCommandBuffer();
+	void endGraphicsAndComputeRenderPass();
+
+
 	FrameInfo beginCompute(uint32_t computeQueueIndex = 0);
 	void submitFramePass();
 	void submitCompute(uint32_t computeQueueIndex = 0, bool syncPrevious = true);
+	void submitGraphicsAndCompute();
 
 	virtual int beginShutdown();
 	int shutdown();
@@ -178,6 +183,7 @@ private:
 
 	VkCommandBuffer _frameCmdBuf[2], _computeCmdBuf[2];
 	VkCommandBuffer _transferCmd[2];
+
 	VkFence			_transferFences[2];
 	uint32_t swapChainImgIndex;								// Tracks frame buffer index for current frame
 	uint32_t frameCycle = 0, stagingCycleOffset = 0;	// Tracks transfer cycle

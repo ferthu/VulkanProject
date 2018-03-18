@@ -414,24 +414,25 @@ void VulkanRenderer::clearBuffer(unsigned int flag)
 
 #pragma region Frame
 
-void VulkanRenderer::present()
+void VulkanRenderer::present(bool skipPresenting)
 {
 	// Present
+	if (!skipPresenting)
+	{
+		VkPresentInfoKHR presentInfo = {};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
-	VkPresentInfoKHR presentInfo = {};
-	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		// Synchronization:
+		presentInfo.waitSemaphoreCount = waitQueueLen;
+		presentInfo.pWaitSemaphores = waitQueue;
 
-	// Synchronization:
-	presentInfo.waitSemaphoreCount = waitQueueLen;
-	presentInfo.pWaitSemaphores = waitQueue;
-
-	VkSwapchainKHR swapChains[] = { swapchain };
-	presentInfo.swapchainCount = 1;
-	presentInfo.pSwapchains = swapChains;
-	presentInfo.pImageIndices = &swapChainImgIndex;
-	presentInfo.pResults = nullptr; // Optional
-	vkQueuePresentKHR(queues[QueueType::GRAPHIC].queue, &presentInfo);
-
+		VkSwapchainKHR swapChains[] = { swapchain };
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = swapChains;
+		presentInfo.pImageIndices = &swapChainImgIndex;
+		presentInfo.pResults = nullptr; // Optional
+		vkQueuePresentKHR(queues[QueueType::GRAPHIC].queue, &presentInfo);
+	}
 
 	nextFrame();
 }
@@ -508,6 +509,30 @@ void VulkanRenderer::endRenderPass()
 {
 	VkCommandBuffer cmdBuf = _frameCmdBuf[getFrameIndex()];
 	vkCmdEndRenderPass(cmdBuf);
+}
+
+void VulkanRenderer::endGraphicsAndComputeRenderPass()
+{
+	VkCommandBuffer cmdBuf = _frameCmdBuf[getFrameIndex()];
+	vkCmdEndRenderPass(cmdBuf);
+}
+
+VulkanRenderer::FrameInfo VulkanRenderer::beginGraphicsAndComputeCommandBuffer()
+{
+	VkCommandBuffer cmdBuf = _frameCmdBuf[getFrameIndex()];
+	waitFence(device, renderFence[getFrameIndex()]);
+	VkResult err = vkResetCommandBuffer(cmdBuf, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+	if (err)
+		std::cout << "Command buff reset err\n";
+	// Begin recording frame commands
+	beginCmdBuf(cmdBuf, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+	FrameInfo info;
+	info._buf = cmdBuf;
+	info._swapChainIndex = swapChainImgIndex;
+	info._swapChainImage = swapchainImages[swapChainImgIndex];
+
+	return info;
 }
 
 void VulkanRenderer::submitFramePass()
@@ -589,6 +614,33 @@ void VulkanRenderer::submitCompute(uint32_t computeQueueIndex, bool syncPrevious
 	}
 }
 
+void VulkanRenderer::submitGraphicsAndCompute()
+{
+	VkCommandBuffer cmdBuf = _frameCmdBuf[getFrameIndex()];
+	if (vkEndCommandBuffer(cmdBuf) != VK_SUCCESS) {
+		throw std::runtime_error("failed to record command buffer!");
+	}
+	// Submit
+	VkSemaphore waitSemaphores[] = { imageAvailable };
+	VkSemaphore signalSemaphores[] = { renderFinished[getFrameIndex()] };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.pWaitDstStageMask = waitStages;	// Mask stage where related semaphore is waited for.
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &cmdBuf;
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = signalSemaphores;
+	VkResult err = vkQueueSubmit(queues[QueueType::GRAPHIC].queue, 1, &submitInfo, renderFence[getFrameIndex()]);
+	if (err != VK_SUCCESS) {
+		throw std::runtime_error("Failed to submit draw command buffer!");
+	}
+	// Sync.
+	waitQueue[waitQueueLen++] = signalSemaphores[0];
+}
 
 void VulkanRenderer::frame(float dt)
 {

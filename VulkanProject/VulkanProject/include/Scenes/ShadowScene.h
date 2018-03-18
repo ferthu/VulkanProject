@@ -14,10 +14,21 @@ class ShadowScene :
 	public Scene
 {
 public:
-	ShadowScene();
+	enum FrameType
+	{
+		STANDARD, SINGLE_COMMAND_BUFFER, ASYNC
+	};
+
+	ShadowScene(FrameType frameType = STANDARD);
 	virtual ~ShadowScene();
 
 	virtual void frame(float dt);
+	void frame_standard(float dt);
+	void frame_single_cmdbuf(float dt);
+	void frame_async(float dt);
+	void async_post(float dt);
+	void async_depthBuffer(float dt);
+
 	virtual void transfer();
 	virtual void initialize(VulkanRenderer* handle);
 
@@ -33,7 +44,14 @@ private:
 	void createCameraMatrix(float time);
 
 	void createBuffers();
-	void post();
+	void post_standard();
+
+	bool firstFrame;
+
+	FrameType frameType;
+
+	VkCommandBuffer depthCommandBuf[2];
+	VkFence depthFence[2];
 
 	const uint32_t shadowMappingMatrixBindingSlot = 0;
 
