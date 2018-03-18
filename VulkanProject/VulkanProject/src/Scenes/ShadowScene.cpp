@@ -43,6 +43,7 @@ ShadowScene::~ShadowScene()
 	postLayout.destroy(_renderHandle->getDevice());
 }
 
+#define COMPILE
 void ShadowScene::initialize(VulkanRenderer* handle)
 {
 	Scene::initialize(handle);
@@ -143,99 +144,6 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	shadowMapViewport.maxDepth = 1.0f;
 
 	createBuffers();
-	/*
-	// Create descriptor pool
-	VkDescriptorPoolSize poolSizes[2];
-	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[0].descriptorCount = 3;
-	poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[1].descriptorCount = 1;
-	desciptorPool = createDescriptorPool(_renderHandle->getDevice(), poolSizes, 2, 4);
-
-	// Allocate descriptor sets
-	VkDescriptorSetAllocateInfo shadowPassAllocateInfo = {};
-	shadowPassAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	shadowPassAllocateInfo.pNext = nullptr;
-	shadowPassAllocateInfo.descriptorPool = desciptorPool;
-	shadowPassAllocateInfo.descriptorSetCount = 1;
-	VkDescriptorSetLayout descriptorSetLayout = _renderHandle->getDescriptorSetLayout(0);
-	shadowPassAllocateInfo.pSetLayouts = &descriptorSetLayout;
-	vkAllocateDescriptorSets(_renderHandle->getDevice(), &shadowPassAllocateInfo, &shadowPassDescriptorSet);
-
-	VkDescriptorSetAllocateInfo renderPassAllocateInfo = {};
-	renderPassAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	renderPassAllocateInfo.pNext = nullptr;
-	renderPassAllocateInfo.descriptorPool = desciptorPool;
-	renderPassAllocateInfo.descriptorSetCount = 1;
-	descriptorSetLayout = _renderHandle->getDescriptorSetLayout(1);
-	renderPassAllocateInfo.pSetLayouts = &descriptorSetLayout;
-	vkAllocateDescriptorSets(_renderHandle->getDevice(), &renderPassAllocateInfo, &renderPassDescriptorSet);
-	
-	
-	// Write descriptors into descriptor sets
-	// Shadow pass
-	VkDescriptorBufferInfo shadowMatrixInfo = {};
-	shadowMatrixInfo.buffer = shadowMappingMatrixBuffer->getBuffer();
-	shadowMatrixInfo.offset = 0;
-	shadowMatrixInfo.range = VK_WHOLE_SIZE;
-
-	VkWriteDescriptorSet shadowPassWrite = {};
-	shadowPassWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	shadowPassWrite.pNext = nullptr;
-	shadowPassWrite.dstSet = shadowPassDescriptorSet;
-	shadowPassWrite.dstBinding = shadowMappingMatrixBindingSlot;
-	shadowPassWrite.descriptorCount = 1;
-	shadowPassWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	shadowPassWrite.pBufferInfo = &shadowMatrixInfo;
-
-	vkUpdateDescriptorSets(_renderHandle->getDevice(), 1, &shadowPassWrite, 0, nullptr);
-
-	// Render pass
-	/*
-	VkWriteDescriptorSet renderPassInfoWrites[3] = { {}, {}, {} };	// This initialization is important, vkUpdateDescriptorSets will freeze without it
-
-	VkDescriptorImageInfo shadowMapInfo = {};
-	shadowMapInfo.sampler = shadowMapSampler->_sampler;
-	shadowMapInfo.imageView = shadowMap->imageInfo.imageView;
-	shadowMapInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-	renderPassInfoWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	renderPassInfoWrites[0].pNext = nullptr;
-	renderPassInfoWrites[0].dstSet = renderPassDescriptorSet;
-	renderPassInfoWrites[0].dstBinding = shadowMapBindingSlot;
-	renderPassInfoWrites[0].descriptorCount = 1;
-	renderPassInfoWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	renderPassInfoWrites[0].pImageInfo = &shadowMapInfo;
-
-	VkDescriptorBufferInfo transformMatrixInfo = {};
-	transformMatrixInfo.buffer = transformMatrixBuffer->getBuffer();
-	transformMatrixInfo.offset = 0;
-	transformMatrixInfo.range = VK_WHOLE_SIZE;
-
-	renderPassInfoWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	renderPassInfoWrites[1].pNext = nullptr;
-	renderPassInfoWrites[1].dstSet = renderPassDescriptorSet;
-	renderPassInfoWrites[1].dstBinding = transformMatrixBindingSlot;
-	renderPassInfoWrites[1].descriptorCount = 1;
-	renderPassInfoWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	renderPassInfoWrites[1].pBufferInfo = &transformMatrixInfo;
-
-	VkDescriptorBufferInfo clipSpaceToShadowMapMatrixInfo = {};
-	clipSpaceToShadowMapMatrixInfo.buffer = lightInfoBuffer->getBuffer();
-	clipSpaceToShadowMapMatrixInfo.offset = 0;
-	clipSpaceToShadowMapMatrixInfo.range = VK_WHOLE_SIZE;
-
-	renderPassInfoWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	renderPassInfoWrites[2].pNext = nullptr;
-	renderPassInfoWrites[2].dstSet = renderPassDescriptorSet;
-	renderPassInfoWrites[2].dstBinding = clipToShadowMapMatrixBindingSlot;
-	renderPassInfoWrites[2].descriptorCount = 1;
-	renderPassInfoWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	renderPassInfoWrites[2].pBufferInfo = &clipSpaceToShadowMapMatrixInfo;
-
-	vkUpdateDescriptorSets(_renderHandle->getDevice(), 3, &renderPassInfoWrites[0], 0, nullptr);
-	*/
-
 
 	// Post pass initiation
 
@@ -367,13 +275,13 @@ void ShadowScene::post()
 	techniqueBlurHorizontal->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
 	// Dispatch
-	vkCmdDispatch(info._buf, 1, 512, 1);
+	vkCmdDispatch(info._buf, 1, _renderHandle->getHeight(), 1);
 
 
 	// Bind compute shader
 	techniqueBlurVertical->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	// Dispatch
-	vkCmdDispatch(info._buf, 1, 512, 1);
+	vkCmdDispatch(info._buf, 1, _renderHandle->getWidth(), 1);
 
 	// Finish
 	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
