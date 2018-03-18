@@ -89,8 +89,8 @@ public:
 
 
 	FrameInfo beginCompute(uint32_t computeQueueIndex = 0);
-	void submitFramePass();
-	void submitCompute(uint32_t computeQueueIndex = 0, bool syncPrevious = true);
+	void submitFramePass(VkSemaphore additionalSignalSemaphore = VK_NULL_HANDLE);
+	void submitCompute(uint32_t computeQueueIndex = 0, bool syncPrevious = true, VkSemaphore additionalWaitSemaphore = VK_NULL_HANDLE);
 	void submitGraphicsAndCompute();
 
 	virtual int beginShutdown();

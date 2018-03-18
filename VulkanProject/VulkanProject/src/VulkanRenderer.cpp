@@ -535,7 +535,7 @@ VulkanRenderer::FrameInfo VulkanRenderer::beginGraphicsAndComputeCommandBuffer()
 	return info;
 }
 
-void VulkanRenderer::submitFramePass()
+void VulkanRenderer::submitFramePass(VkSemaphore additionalSignalSemaphore)
 {
 	VkCommandBuffer cmdBuf = _frameCmdBuf[getFrameIndex()];
 	if (vkEndCommandBuffer(cmdBuf) != VK_SUCCESS) {
@@ -543,7 +543,8 @@ void VulkanRenderer::submitFramePass()
 	}
 	// Submit
 	VkSemaphore waitSemaphores[] = { imageAvailable };
-	VkSemaphore signalSemaphores[] = { renderFinished[getFrameIndex()] };
+	VkSemaphore signalSemaphores[] = { renderFinished[getFrameIndex()], additionalSignalSemaphore };
+	int signalSemaphoreCount = (additionalSignalSemaphore == VK_NULL_HANDLE) ? 1 : 2;
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
 	VkSubmitInfo submitInfo = {};
@@ -553,7 +554,7 @@ void VulkanRenderer::submitFramePass()
 	submitInfo.pWaitDstStageMask = waitStages;	// Mask stage where related semaphore is waited for.
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &cmdBuf;
-	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.signalSemaphoreCount = signalSemaphoreCount;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 	VkResult err = vkQueueSubmit(queues[QueueType::GRAPHIC].queue, 1, &submitInfo, renderFence[getFrameIndex()]);
 	if (err != VK_SUCCESS) {
@@ -579,7 +580,7 @@ VulkanRenderer::FrameInfo VulkanRenderer::beginCompute(uint32_t computeQueueInde
 	info._swapChainImage = swapchainImages[swapChainImgIndex];
 	return info;
 }
-void VulkanRenderer::submitCompute(uint32_t computeQueueIndex, bool syncPrevious)
+void VulkanRenderer::submitCompute(uint32_t computeQueueIndex, bool syncPrevious, VkSemaphore additionalWaitSemaphore)
 {
 	VkCommandBuffer compBuf = _computeCmdBuf[computeQueueIndex];
 	if (vkEndCommandBuffer(compBuf) != VK_SUCCESS) {
@@ -588,7 +589,7 @@ void VulkanRenderer::submitCompute(uint32_t computeQueueIndex, bool syncPrevious
 
 	// Submit
 	uint32_t waitLen = 0;
-	VkSemaphore waitSemaphores[1];
+	VkSemaphore waitSemaphores[2];
 	if (syncPrevious && waitQueueLen > 0)
 	{
 		waitSemaphores[waitLen++] = waitQueue[waitQueueLen - 1];
@@ -597,11 +598,13 @@ void VulkanRenderer::submitCompute(uint32_t computeQueueIndex, bool syncPrevious
 	else
 		waitQueue[waitQueueLen++] = computeFinished[computeQueueIndex];
 	VkSemaphore signalSemaphores[] = { computeFinished[computeQueueIndex] };
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT };
+	waitSemaphores[1] = additionalWaitSemaphore;
+	int additionalWaitSemaphoreCount = (additionalWaitSemaphore == VK_NULL_HANDLE) ? 0 : 1;
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.waitSemaphoreCount = waitLen;
+	submitInfo.waitSemaphoreCount = waitLen + additionalWaitSemaphoreCount;
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;		// Mask stage where related semaphore is waited for.
 	submitInfo.commandBufferCount = 1;

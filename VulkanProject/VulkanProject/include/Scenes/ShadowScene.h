@@ -52,6 +52,7 @@ private:
 
 	VkCommandBuffer depthCommandBuf[2];
 	VkFence depthFence[2];
+	VkSemaphore colorPassCompleteSemaphore;
 
 	const uint32_t shadowMappingMatrixBindingSlot = 0;
 

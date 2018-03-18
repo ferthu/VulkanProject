@@ -44,7 +44,7 @@ ShadowScene::~ShadowScene()
 	postLayout.destroy(_renderHandle->getDevice());
 }
 
-#define COMPILE
+//#define COMPILE
 void ShadowScene::initialize(VulkanRenderer* handle)
 {
 	Scene::initialize(handle);
@@ -196,6 +196,13 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	depthCommandBuf[1] = allocateCmdBuf(device, _renderHandle->queues[QueueType::GRAPHIC].pool);
 	depthFence[0] = createFence(device, true);
 	depthFence[1] = createFence(device, true);
+
+	VkSemaphoreCreateInfo semaphoreCreateInfo = {};
+	semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	semaphoreCreateInfo.pNext = nullptr;
+	semaphoreCreateInfo.flags = 0;
+
+	vkCreateSemaphore(_renderHandle->getDevice(), &semaphoreCreateInfo, nullptr, &colorPassCompleteSemaphore);
 }
 
 void ShadowScene::transfer()
@@ -409,7 +416,10 @@ void ShadowScene::frame_async(float dt)
 	createCameraMatrix(counter);
 
 	// Submit
-	_renderHandle->submitFramePass();
+	if (!firstFrame)
+		_renderHandle->submitFramePass(colorPassCompleteSemaphore);
+	else
+		_renderHandle->submitFramePass();
 
 	// Post
 	if (!firstFrame)
@@ -441,7 +451,7 @@ void ShadowScene::async_post(float dt)
 
 	// Finish
 	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
-	_renderHandle->submitCompute(0, true);
+	_renderHandle->submitCompute(0, true, colorPassCompleteSemaphore);
 }
 
 void ShadowScene::async_depthBuffer(float dt)
