@@ -289,9 +289,33 @@ void ShadowScene::frame_standard(float dt)
 	// Submit
 	_renderHandle->submitFramePass();
 
-	post_async(dt);
+	post_standard();
 
 	_renderHandle->present();
+}
+
+void ShadowScene::post_standard()
+{
+	VulkanRenderer::FrameInfo info = _renderHandle->beginCompute();
+	transition_DepthWrite(info._buf, shadowMap->_imageHandle);
+	transition_RenderToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
+	
+	// Bind compute shader
+	techniqueBlurHorizontal->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
+	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
+	// Dispatch
+	vkCmdDispatch(info._buf, 1, _renderHandle->getHeight(), 1);
+
+	serializeCommandBuffer(info._buf);
+	
+	// Bind compute shader
+	techniqueBlurVertical->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
+	// Dispatch
+	vkCmdDispatch(info._buf, 1, _renderHandle->getWidth(), 1);
+	
+	// Finish
+	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
+	_renderHandle->submitCompute(0, true);
 }
 
 void ShadowScene::frame_single_cmdbuf(float dt)
@@ -361,14 +385,14 @@ void ShadowScene::frame_single_cmdbuf(float dt)
 	techniqueBlurHorizontal->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
 	// Dispatch
-	vkCmdDispatch(info._buf, 1, 512, 1);
+	vkCmdDispatch(info._buf, 1, _renderHandle->getHeight(), 1);
 
 
 	serializeCommandBuffer(info._buf);
 	// Bind compute shader
 	techniqueBlurVertical->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	// Dispatch
-	vkCmdDispatch(info._buf, 1, 512, 1);
+	vkCmdDispatch(info._buf, 1, _renderHandle->getWidth(), 1);
 
 	// Finish
 	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
