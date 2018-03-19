@@ -26,7 +26,7 @@ public:
 	void frame_standard(float dt);
 	void frame_single_cmdbuf(float dt);
 	void frame_async(float dt);
-	void async_post(float dt);
+	void post_async(float dt);
 	void async_depthBuffer(float dt);
 
 	virtual void transfer();
@@ -44,7 +44,6 @@ private:
 	void createCameraMatrix(float time);
 
 	void createBuffers();
-	void post_standard();
 
 	bool firstFrame;
 

@@ -289,7 +289,7 @@ void ShadowScene::frame_standard(float dt)
 	// Submit
 	_renderHandle->submitFramePass();
 
-	post_standard();
+	post_async(dt);
 
 	_renderHandle->present();
 }
@@ -364,6 +364,7 @@ void ShadowScene::frame_single_cmdbuf(float dt)
 	vkCmdDispatch(info._buf, 1, 512, 1);
 
 
+	serializeCommandBuffer(info._buf);
 	// Bind compute shader
 	techniqueBlurVertical->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
 	// Dispatch
@@ -423,7 +424,7 @@ void ShadowScene::frame_async(float dt)
 
 	// Post
 	if (!firstFrame)
-		async_post(dt);
+		post_async(dt);
 	async_depthBuffer(dt);
 
 	_renderHandle->present(firstFrame);
@@ -431,7 +432,7 @@ void ShadowScene::frame_async(float dt)
 	firstFrame = false;
 }
 
-void ShadowScene::async_post(float dt)
+void ShadowScene::post_async(float dt)
 {
 	// Post
 	VulkanRenderer::FrameInfo info = _renderHandle->beginCompute(0);
@@ -511,30 +512,6 @@ void ShadowScene::async_depthBuffer(float dt)
 	if (err != VK_SUCCESS) {
 		throw std::runtime_error("Failed to submit draw command buffer!");
 	}
-}
-
-
-void ShadowScene::post_standard()
-{
-	VulkanRenderer::FrameInfo info = _renderHandle->beginCompute();
-	transition_DepthWrite(info._buf, shadowMap->_imageHandle);
-	transition_RenderToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
-
-	// Bind compute shader
-	techniqueBlurHorizontal->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
-	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
-	// Dispatch
-	vkCmdDispatch(info._buf, 1, _renderHandle->getHeight(), 1);
-
-
-	// Bind compute shader
-	techniqueBlurVertical->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
-	// Dispatch
-	vkCmdDispatch(info._buf, 1, _renderHandle->getWidth(), 1);
-
-	// Finish
-	transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
-	_renderHandle->submitCompute(0, true);
 }
 
 
