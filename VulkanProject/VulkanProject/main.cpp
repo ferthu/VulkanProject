@@ -61,7 +61,7 @@ int main(int argc, const char* argv)
 		//renderer.initialize(new ComputeExperiment((ComputeExperiment::Mode)mode, shader, particles, locality), dimW, dimH, TRIPLE_BUFFERED); // 256, 256
 		//renderer.initialize(new ComputeScene(ComputeScene::Mode::Blur), 1024, 1024, 0);
 		//renderer.initialize(new TriangleScene(), 512, 512, 0);
-		renderer.initialize(new ShadowScene(ShadowScene::FrameType::ASYNC), 800, 600, TRIPLE_BUFFERED);
+		renderer.initialize(new ShadowScene(ShadowScene::FrameType::STANDARD), 800, 600, TRIPLE_BUFFERED);
 
 		SDL_Event windowEvent;
 		while (true)
