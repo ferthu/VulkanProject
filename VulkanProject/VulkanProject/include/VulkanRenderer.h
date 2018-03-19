@@ -43,7 +43,7 @@ enum RenderFlagBits
 
 const int MAX_DESCRIPTOR_POOLS = 12;
 // Size in bytes of the memory types used
-const uint32_t STORAGE_SIZE[(int)MemoryPool::Count] = { 2048 * 2048*64, 2048 * 2048*64, 2048 * 2048*4, 2048 * 2048 * 64, 1024 * 1024 * 64, 1024 * 1024 * 10 };
+const uint32_t STORAGE_SIZE[(int)MemoryPool::Count] = { 2048 * 2048*64, 2048 * 2048*64, 2048 * 2048 * 10, 2048 * 2048 * 64, 1024 * 1024 * 64, 2048 * 2048 * 10 };
 
 
 class Scene;

@@ -22,7 +22,7 @@ static std::vector<double>	perfCounter;
 static double elapsedTime = 0.0;
 static double lastElapsedTime = 0.0;
 const double INIT_WAIT_TIMER = 100;
-const int MIN_SAMPLES = 0;								// = 0 if inf runtime, sampling: 500
+const int MIN_SAMPLES = 1000;								// = 0 if inf runtime, sampling: 500
 const double RUN_DURATION = INIT_WAIT_TIMER + 1000.f;	//ms
 
 inline double square(double val) { return val * val; }
