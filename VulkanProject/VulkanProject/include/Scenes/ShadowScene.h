@@ -28,7 +28,6 @@ public:
 	void frame_single_cmdbuf(float dt);
 	void frame_async(float dt);
 	void post_async(float dt);
-	void post_standard();
 	void async_depthBuffer(float dt);
 
 	virtual void transfer();
