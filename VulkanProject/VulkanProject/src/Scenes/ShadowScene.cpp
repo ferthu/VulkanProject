@@ -61,12 +61,15 @@ void ShadowScene::initialize(VulkanRenderer* handle)
 	lightInfo.clipSpaceToShadowMapMatrix = lightMatrix;
 
 	// Create vertex buffer
-	if (false)
+	if (true)
 	{
 		// Create triangles
-		const uint32_t TRIANGLE_COUNT = 100;
-		glm::vec4 vertexPositions[TRIANGLE_COUNT * 3];
-		glm::vec3 vertexNormals[TRIANGLE_COUNT * 3];
+		const uint32_t TRIANGLE_COUNT = 1000000;
+		glm::vec4* vertexPositions = new glm::vec4[TRIANGLE_COUNT * 3];
+		glm::vec3* vertexNormals = new glm::vec3[TRIANGLE_COUNT * 3];
+
+		/*glm::vec4 vertexPositions[TRIANGLE_COUNT * 3];
+		glm::vec3 vertexNormals[TRIANGLE_COUNT * 3];*/
 
 		mf::RandomGenerator randomGenerator;
 		randomGenerator.seedGenerator();

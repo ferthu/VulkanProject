@@ -24,6 +24,7 @@ public:
 
 	virtual void frame(float dt);
 	void frame_standard(float dt);
+	void post_standard();
 	void frame_single_cmdbuf(float dt);
 	void frame_async(float dt);
 	void post_async(float dt);
