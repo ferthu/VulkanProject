@@ -71,8 +71,8 @@ double vk::QueryPool::getTimestampDiff(uint32_t beginQuery, uint32_t endQuery)
 {
 	const double toMS = 1.0 / std::pow(10, 6);
 	uint64_t start = _queryBuffer[beginQuery], end = _queryBuffer[endQuery];
-	std::cout << "Begin: " << start * toMS << ", End: " << end * toMS << ", Diff: " << (end - start) * toMS << "\n";
-	return (end - start) * toMS / _timeStampPeriod;
+	//std::cout << "Begin: " << start * toMS << ", End: " << end * toMS << ", Diff: " << (end - start) * toMS << "\n";
+	return (end - start) * toMS * _timeStampPeriod;
 }
 
 vk::QueryFrame::QueryFrame()

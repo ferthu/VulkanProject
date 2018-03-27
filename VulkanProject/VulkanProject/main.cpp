@@ -22,7 +22,7 @@ static std::vector<double>	perfCounter, graphQueue, compQueue1, compQueue2;
 static double elapsedTime = 0.0;
 static double lastElapsedTime = 0.0;
 const double INIT_WAIT_TIMER = 100;
-const int MIN_SAMPLES = 100;								// = 0 if inf runtime, sampling: 500
+const int MIN_SAMPLES = 1000;								// = 0 if inf runtime, sampling: 500
 const double RUN_DURATION = INIT_WAIT_TIMER + 1000.f;	//ms
 
 inline double square(double val) { return val * val; }
@@ -44,7 +44,7 @@ int main(int argc, const char* argv)
 	uint32_t RUN_ONCE = 1;
 	uint32_t LOCALITY_TESTS = 14; 
 
-	uint32_t ITERS = 1;
+	uint32_t ITERS = 32;
 
 	for (uint32_t i = 0; i < (MIN_SAMPLES == 0 ? 1 : ITERS); i++)
 	{
@@ -57,7 +57,7 @@ int main(int argc, const char* argv)
 		compQueue2.clear();
 
 		VulkanRenderer renderer;
-		uint32_t particles = 1024 * 1024;
+		uint32_t particles = 1024 * 32* (i+1);
 		uint32_t dimW = 1024, dimH = 1024, pixels = dimW * dimH;
 		float locality = 8.f;// 512.f / (std::pow(2.f, i));
 		uint32_t mode = ComputeExperiment::Mode::SEQUENTIAL;
