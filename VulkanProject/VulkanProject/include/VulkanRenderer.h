@@ -131,6 +131,8 @@ public:
 	VkDescriptorSetLayout getDescriptorSetLayout(uint32_t index);
 
 	vk::QueueConstruct queues;
+	vk::QueryPool _queries;
+	vk::QueryFrame _timeStamps[2];
 
 private:
 	Scene * scene;

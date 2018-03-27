@@ -192,7 +192,6 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 		std::cout << "Swapchain storage supported!\n";
 
 	vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
-
 	queues.fetchDeviceQueues(device);
 #
 #ifdef _DEBUG
@@ -326,6 +325,10 @@ int VulkanRenderer::initialize(Scene *scene, unsigned int width, unsigned int he
 	_computeCmdBuf[0] = allocateCmdBuf(device, queues[QueueType::COMPUTE].pool);
 	_computeCmdBuf[1] = allocateCmdBuf(device, queues[QueueType::COMPUTE2].pool);
 
+	_queries = vk::QueryPool(device, deviceProperties, VkQueryType::VK_QUERY_TYPE_TIMESTAMP, 12, 0);
+	VkCommandBuffer cmdBuf = beginSingleCommand(device, queues[QueueType::GRAPHIC].pool);
+	_queries.init(cmdBuf);
+	endSingleCommand_Wait(device, queues[QueueType::GRAPHIC].queue, queues[QueueType::GRAPHIC].pool, cmdBuf);
 	// Our scene implementation
 	scene->defineDescriptorLayout(device, descriptorLayouts);
 	pipelineLayout = createPipelineLayout(device, descriptorLayouts.data(), (uint32_t)descriptorLayouts.size());
@@ -363,6 +366,7 @@ int VulkanRenderer::shutdown()
 	for (size_t i = 0; i < descriptorLayouts.size(); i++)
 			vkDestroyDescriptorSetLayout(device, descriptorLayouts[i], nullptr);
 
+	_queries.destroy(device);
 	// Destroy command pools
 	queues.destroy(device);
 
@@ -441,7 +445,7 @@ void VulkanRenderer::nextFrame()
 	// Cancel wait index
 	waitQueueLen = 0;
 	// Cycle frame index
-	frameCycle = !frameCycle;	
+	frameCycle = !frameCycle;
 	// Reset the command buffer
 	VkResult err = vkResetCommandBuffer(_transferCmd[getTransferIndex()], VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 	if (err)
@@ -452,8 +456,13 @@ void VulkanRenderer::nextFrame()
 
 VulkanRenderer::FrameInfo VulkanRenderer::beginFramePass(VkFramebuffer* frameBuffer)
 {	
-	FrameInfo info = beginCommandBuffer();
 
+	_timeStamps[getTransferIndex()].fetchQuery(device, true);
+	FrameInfo info = beginCommandBuffer();
+	_timeStamps[getTransferIndex()].reset(info._buf);
+	_timeStamps[getFrameIndex()] = _queries.newFrame(device);
+	_timeStamps[getFrameIndex()].timeStamp(info._buf, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+	//_timeStamps[getFrameIndex()].timeStamp(info._buf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 	beginRenderPass(info._buf, frameBuffer);
 
 	return info;
@@ -513,6 +522,7 @@ void VulkanRenderer::endRenderPass()
 void VulkanRenderer::submitFramePass()
 {
 	VkCommandBuffer cmdBuf = _frameCmdBuf[getFrameIndex()];
+	_timeStamps[getFrameIndex()].timeStamp(cmdBuf, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	if (vkEndCommandBuffer(cmdBuf) != VK_SUCCESS) {
 		throw std::runtime_error("failed to record command buffer!");
 	}
@@ -547,6 +557,7 @@ VulkanRenderer::FrameInfo VulkanRenderer::beginCompute(uint32_t computeQueueInde
 		std::cout << "Command buff reset err\n";
 	// Begin recording frame commands
 	beginCmdBuf(compBuf,  VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+	_timeStamps[getFrameIndex()].timeStamp(compBuf, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 
 	FrameInfo info;
 	info._buf = compBuf;
@@ -557,6 +568,7 @@ VulkanRenderer::FrameInfo VulkanRenderer::beginCompute(uint32_t computeQueueInde
 void VulkanRenderer::submitCompute(uint32_t computeQueueIndex, bool syncPrevious)
 {
 	VkCommandBuffer compBuf = _computeCmdBuf[computeQueueIndex];
+	_timeStamps[getFrameIndex()].timeStamp(compBuf, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 	if (vkEndCommandBuffer(compBuf) != VK_SUCCESS) {
 		throw std::runtime_error("failed to record command buffer!");
 	}

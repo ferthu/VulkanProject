@@ -18,11 +18,11 @@ void updateWinTitle(VulkanRenderer *rend);
 void resetTime();
 void outPerfCounters(std::string params);
 
-static std::vector<double>	perfCounter;
+static std::vector<double>	perfCounter, graphQueue, compQueue1, compQueue2;
 static double elapsedTime = 0.0;
 static double lastElapsedTime = 0.0;
 const double INIT_WAIT_TIMER = 100;
-const int MIN_SAMPLES = 0;								// = 0 if inf runtime, sampling: 500
+const int MIN_SAMPLES = 100;								// = 0 if inf runtime, sampling: 500
 const double RUN_DURATION = INIT_WAIT_TIMER + 1000.f;	//ms
 
 inline double square(double val) { return val * val; }
@@ -37,10 +37,14 @@ const std::string MODE_STR[] = {
 
 int main(int argc, const char* argv)
 {
+	perfCounter.reserve(10000);
+	graphQueue.reserve(10000);
+	compQueue1.reserve(10000);
+	compQueue2.reserve(10000);
 	uint32_t RUN_ONCE = 1;
 	uint32_t LOCALITY_TESTS = 14; 
 
-	uint32_t ITERS = RUN_ONCE;
+	uint32_t ITERS = 1;
 
 	for (uint32_t i = 0; i < (MIN_SAMPLES == 0 ? 1 : ITERS); i++)
 	{
@@ -48,20 +52,22 @@ int main(int argc, const char* argv)
 		elapsedTime = 0.0;
 		lastElapsedTime = 0.0;
 		perfCounter.clear();
+		graphQueue.clear();
+		compQueue1.clear();
+		compQueue2.clear();
 
 		VulkanRenderer renderer;
-		perfCounter.reserve(10000);
 		uint32_t particles = 1024 * 1024;
 		uint32_t dimW = 1024, dimH = 1024, pixels = dimW * dimH;
-		float locality = 512.f / (std::pow(2.f, i));
-		uint32_t mode = ComputeExperiment::Mode::MULTI_QUEUE;
+		float locality = 8.f;// 512.f / (std::pow(2.f, i));
+		uint32_t mode = ComputeExperiment::Mode::SEQUENTIAL;
 		uint32_t shader = ComputeExperiment::MEM_LIMITED;
 		std::stringstream outString;
 		outString << "MEM_" << MODE_STR[mode] << ", " << pixels << ", " << particles << ", " << locality;
-		//renderer.initialize(new ComputeExperiment((ComputeExperiment::Mode)mode, shader, particles, locality), dimW, dimH, TRIPLE_BUFFERED); // 256, 256
+		renderer.initialize(new ComputeExperiment((ComputeExperiment::Mode)mode, shader, particles, locality), dimW, dimH, TRIPLE_BUFFERED); // 256, 256
 		//renderer.initialize(new ComputeScene(ComputeScene::Mode::Blur), 1024, 1024, 0);
 		//renderer.initialize(new TriangleScene(), 512, 512, 0);
-		renderer.initialize(new ShadowScene(), 800, 600, TRIPLE_BUFFERED);
+		//renderer.initialize(new ShadowScene(), 800, 600, TRIPLE_BUFFERED);
 
 		SDL_Event windowEvent;
 		while (true)
@@ -109,6 +115,13 @@ void updateWinTitle(VulkanRenderer *rend)
 		elapsedTime = std::fmod(deltaTime + elapsedTime, 100000);
 		if (elapsedTime > INIT_WAIT_TIMER)
 			perfCounter.push_back(deltaTime);
+		
+		if (rend->_queries._numQueries > 0)
+			graphQueue.push_back(rend->_queries.getTimestampDiff(0));
+		if (rend->_queries._numQueries > 2)
+			compQueue1.push_back(rend->_queries.getTimestampDiff(2));
+		if (rend->_queries._numQueries > 4)
+			compQueue2.push_back(rend->_queries.getTimestampDiff(4));
 	}
 	// moving average window of WINDOWS_SIZE
 	lastSum -= avg[loop];
@@ -161,7 +174,26 @@ void outPerfCounters(std::string params)
 
 		double avg = mean(perfCounter);
 		double dev = stdev(perfCounter, avg);
-		stream << sum(perfCounter) << ", " << avg << ", " << dev << "\n";
+		stream << sum(perfCounter) << ", " << avg << ", " << dev;
+		if (graphQueue.size() > 0)
+		{
+			avg = mean(graphQueue);
+			dev = stdev(graphQueue, avg);
+			stream << ", " << avg << ", " << dev;
+		}
+		if (compQueue1.size() > 0)
+		{
+			avg = mean(compQueue1);
+			dev = stdev(compQueue1, avg);
+			stream << ", " << avg << ", " << dev;
+		}
+		if (compQueue2.size() > 0)
+		{
+			avg = mean(compQueue2);
+			dev = stdev(compQueue2, avg);
+			stream  << ", " << avg << ", " << dev;
+		}
+		stream << std::endl;
 		stream.close();
 	}
 	stream.open("Metric.log", std::ios::trunc | std::ios::out);

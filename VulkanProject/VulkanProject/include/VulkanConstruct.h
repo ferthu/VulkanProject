@@ -93,7 +93,8 @@ namespace vk
 		size_t size();
 	};
 
-
+	/* Layout array for pipeline layouts.
+	*/
 	struct LayoutConstruct
 	{
 	public:
@@ -107,6 +108,70 @@ namespace vk
 		void construct(VkDevice dev);
 		void destroy(VkDevice dev);
 		VkDescriptorSetLayout& operator[](uint32_t index);
+	};
+
+	class QueryPool;
+	struct QueryFrame
+	{
+		QueryPool *_ref;
+		uint32_t _index, _count; // First index in the query pool, and number of queries performed
+
+		QueryFrame();
+		QueryFrame(QueryPool &ref, uint32_t index);
+		/* Begin a query for the frame, not applied for timestamps
+		*/
+		void beginQuery(VkCommandBuffer cmdBuf, VkQueryControlFlags flags = 0);
+		/* End an query for the frame
+		cmdBuf	<<	Related command buffer
+		queryID	<<	The index the query was launched within the frame
+		*/
+		void endQuery(VkCommandBuffer cmdBuf, uint32_t queryID);
+		/* Perform a timestamp, query pool must be a timestamp pool.
+		*/
+		void timeStamp(VkCommandBuffer cmdBuf, VkPipelineStageFlagBits stage);
+		/* Fetch query results
+		*/
+		VkResult fetchQuery(VkDevice dev, bool waitResult = false);
+		/* Reset the query frame for re-use (should be called after data is fetched)
+		cmdBuf	<<	The commandbuffer used to reset the query.
+		*/
+		void reset(VkCommandBuffer cmdBuf);
+		/* Get next query index
+ 		*/
+		uint32_t next();
+	};
+	/* Data pool used for queries of a specific type.
+	*/
+	class QueryPool
+	{
+	public:
+		VkQueryPool _pool;
+		// Current cycled index, total size of the pool and stride related to VkQueryType.
+		uint32_t _cycleIndex, _size, _stride;
+		// Byte size of the query buffer and number of queries currently allocated in the buffer
+		uint32_t _bufSize, _numQueries;
+		// Query buffer used to store results for access
+		uint64_t * _queryBuffer;
+		double _timeStampPeriod;
+
+		QueryPool();
+		QueryPool(VkDevice dev, VkPhysicalDeviceProperties &props, VkQueryType queryType, uint32_t size, VkQueryPipelineStatisticFlags flags = 0);
+		~QueryPool();
+
+		void init(VkCommandBuffer cmdBuf);
+		void resetBuf();
+
+		QueryFrame newFrame(VkDevice dev);
+		void destroy(VkDevice dev);
+
+		/* Acquire a single query result from the currently acquired buffer
+		*/
+		double getTimestampDiff(uint32_t queryPairIndex);
+		/* Acquire a single query result from the currently acquired buffer
+		*/
+		double getTimestampDiff(uint32_t beginQuery, uint32_t endQuery);
+
+	private:
 	};
 }
 
@@ -427,7 +492,7 @@ int anyQueueFamily(VkPhysicalDevice &device, VkQueueFlags* pref_queueFlag, int n
 {
 	std::vector<VkQueueFamilyProperties> queueFamilyProperties;		// Holds queue properties of corresponding physical device in physicalDevices
 	ALLOC_QUERY(vkGetPhysicalDeviceQueueFamilyProperties, queueFamilyProperties, device);
-
+	
 	//Find queue matching the queue flags:
 	for (int f = 0; f < num_flag; f++)
 	{
@@ -526,7 +591,7 @@ int choosePhysicalDevice(VkInstance &instance, VkSurfaceKHR &surface, vk::isDevi
 		if (physicalDevices.size() == 0)
 			throw std::runtime_error("Failed to find GPUs with Vulkan support!");
 
-	VkPhysicalDeviceProperties property;
+	VkPhysicalDeviceProperties properties;
 	VkPhysicalDeviceFeatures feature;
 	std::vector<VkQueueFamilyProperties> familyProperty;
 
@@ -539,7 +604,7 @@ int choosePhysicalDevice(VkInstance &instance, VkSurfaceKHR &surface, vk::isDevi
 	// Check for a discrete GPU
 	for (uint32_t i = 0; i < physicalDevices.size(); ++i)
 	{
-		vkGetPhysicalDeviceProperties(physicalDevices[i], &property);									// Holds properties of corresponding physical device in physicalDevices
+		vkGetPhysicalDeviceProperties(physicalDevices[i], &properties);									// Holds properties of corresponding physical device in physicalDevices
 		vkGetPhysicalDeviceFeatures(physicalDevices[i], &feature);										// Holds features of corresponding physical device in physicalDevices
 
 		ALLOC_QUERY(vkGetPhysicalDeviceQueueFamilyProperties, familyProperty, physicalDevices[i]);		// Holds queue properties of corresponding physical device in physicalDevices
@@ -556,7 +621,7 @@ int choosePhysicalDevice(VkInstance &instance, VkSurfaceKHR &surface, vk::isDevi
 			continue;
 
 		// Find suitable device
-		int rank = deviceSpec(physicalDevices[i], property, feature, familyProperty.data(), familyProperty.size());
+		int rank = deviceSpec(physicalDevices[i], properties, feature, familyProperty.data(), familyProperty.size());
 		if (rank > 0)
 			list.push_back({ (int)i, rank });
 	}
