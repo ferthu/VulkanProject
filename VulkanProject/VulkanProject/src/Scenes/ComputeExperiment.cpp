@@ -213,44 +213,59 @@ void ComputeExperiment::frame(float dt)
 	*/
 	// Finish
 	_renderHandle->endRenderPass();
+
+	if (hasFlag(shaderMode, ShaderModeBit::GRAPH_QUEUE))
+	{
+		transition_RenderToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
+		// Dispatch frame compute shader
+		techniquePost->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
+		// Bind resources
+		vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
+		postParams->bind(info._buf, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
+		readImg->bind(info._buf, 2, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
+		vkCmdDispatch(info._buf, _renderHandle->getWidth() / 16, _renderHandle->getHeight() / 16, 1);
+		transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
+	}
+
 	_renderHandle->submitFramePass();
 
 
 	// Post pass
 	info = _renderHandle->beginCompute();
-	transition_RenderToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
+	if (!hasFlag(shaderMode, ShaderModeBit::GRAPH_QUEUE))
+	{
+		transition_RenderToPost(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::GRAPHIC), _renderHandle->getQueueFamily(QueueType::COMPUTE));
 
-	// Dispatch frame compute shader
-	techniquePost->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
-	// Bind resources
-	vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
-	if (hasFlag(shaderMode, ShaderModeBit::MEM_LIMITED))
-	{
-		postParams->bind(info._buf, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
-		readImg->bind(info._buf, 2, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
-	}
-	// Dispatch
-	uint32_t dimX = _renderHandle->getWidth() / 16;
-	uint32_t dimY = _renderHandle->getHeight() / 16;
-	if (mode == Mode::MULTI_DISPATCH)
-	{
-		for (uint32_t y = 0; y < _renderHandle->getHeight() / (16 * 8); y++)
+		// Dispatch frame compute shader
+		techniquePost->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
+		// Bind resources
+		vkCmdBindDescriptorSets(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE, postLayout._layout, 0, 1, &swapChainImgDesc[info._swapChainIndex], 0, nullptr);
+		if (hasFlag(shaderMode, ShaderModeBit::MEM_LIMITED))
 		{
-			for (uint32_t x = 0; x < _renderHandle->getWidth() / (16 * 8); x++)
-				vkCmdDispatch(info._buf, 8, 8, 1);
+			postParams->bind(info._buf, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
+			readImg->bind(info._buf, 2, postLayout._layout, VK_PIPELINE_BIND_POINT_COMPUTE);
 		}
+		// Dispatch
+		if (mode == Mode::MULTI_DISPATCH)
+		{
+			for (uint32_t y = 0; y < _renderHandle->getHeight() / (16 * 8); y++)
+			{
+				for (uint32_t x = 0; x < _renderHandle->getWidth() / (16 * 8); x++)
+					vkCmdDispatch(info._buf, 8, 8, 1);
+			}
+		}
+		else
+			vkCmdDispatch(info._buf, _renderHandle->getWidth() / 16, _renderHandle->getHeight() / 16, 1);
+		if (mode == Mode::MULTI_QUEUE)
+		{
+			transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
+			_renderHandle->submitCompute(0, true);
+			info = _renderHandle->beginCompute(1);
+		}
+		else if (mode == Mode::SEQUENTIAL)
+			serializeCommandBuffer(info._buf);
 	}
-	else
-		vkCmdDispatch(info._buf, dimX, dimY, 1);
 
-	if (mode == Mode::MULTI_QUEUE)
-	{
-		transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
-		_renderHandle->submitCompute(0, true);
-		info = _renderHandle->beginCompute(1);
-	}
-	else if (mode == Mode::SEQUENTIAL)
-		serializeCommandBuffer(info._buf);
 	
 	// Dispatch compute operation
 	techniqueSmallOp->bind(info._buf, VK_PIPELINE_BIND_POINT_COMPUTE);
@@ -265,14 +280,20 @@ void ComputeExperiment::frame(float dt)
 		vkCmdDispatch(info._buf, NUM_PARTICLE / 256, 1, 1);
 
 	//Transition frame buf back
-	if (mode == Mode::MULTI_QUEUE)
+	if (!hasFlag(shaderMode, ShaderModeBit::GRAPH_QUEUE) && mode == Mode::MULTI_QUEUE)
 	{
 		_renderHandle->submitCompute(1, false);
 	}
 	else
 	{
-		transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
-		_renderHandle->submitCompute(0, true);
+
+		if (!hasFlag(shaderMode, ShaderModeBit::GRAPH_QUEUE))
+		{
+			transition_PostToPresent(info._buf, info._swapChainImage, _renderHandle->getQueueFamily(QueueType::COMPUTE), _renderHandle->getQueueFamily(QueueType::GRAPHIC));
+			_renderHandle->submitCompute(0, true);
+		}
+		else
+			_renderHandle->submitCompute(0, false);
 	}
 	
 	_renderHandle->present();

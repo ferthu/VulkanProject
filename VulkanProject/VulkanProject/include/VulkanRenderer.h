@@ -43,7 +43,7 @@ enum RenderFlagBits
 
 const int MAX_DESCRIPTOR_POOLS = 12;
 // Size in bytes of the memory types used
-const uint32_t STORAGE_SIZE[(int)MemoryPool::Count] = { 2048 * 2048*64, 2048 * 2048*64, 2048 * 2048*4, 2048 * 2048 * 64, 1024 * 1024 * 64, 1024 * 1024 * 10 };
+const uint32_t STORAGE_SIZE[(int)MemoryPool::Count] = { 2048 * 2048*64, 2048 * 2048*64, 2048 * 2048*4, 2048 * 2048 * 64, 1024 * 1024 * 64, 4096 * 4096 * 2 };
 
 
 class Scene;
@@ -68,7 +68,7 @@ public:
 
 	int initialize(Scene *scene, unsigned int width, unsigned int height, uint32_t BIT_FLAGS);
 	void frame(float dt);
-	void present();
+	void present(bool skipPresenting = false);
 
 	struct FrameInfo
 	{
@@ -84,9 +84,14 @@ public:
 	void beginRenderPass(VkCommandBuffer cmdBuf, VkFramebuffer* frameBuffer = NULL);
 	void endRenderPass();
 
+	FrameInfo beginGraphicsAndComputeCommandBuffer();
+	void endGraphicsAndComputeRenderPass();
+
+
 	FrameInfo beginCompute(uint32_t computeQueueIndex = 0);
-	void submitFramePass();
-	void submitCompute(uint32_t computeQueueIndex = 0, bool syncPrevious = true);
+	void submitFramePass(VkSemaphore additionalSignalSemaphore = VK_NULL_HANDLE);
+	void submitCompute(uint32_t computeQueueIndex = 0, bool syncPrevious = true, VkSemaphore additionalWaitSemaphore = VK_NULL_HANDLE);
+	void submitGraphicsAndCompute();
 
 	virtual int beginShutdown();
 	int shutdown();
@@ -180,6 +185,7 @@ private:
 
 	VkCommandBuffer _frameCmdBuf[2], _computeCmdBuf[2];
 	VkCommandBuffer _transferCmd[2];
+
 	VkFence			_transferFences[2];
 	uint32_t swapChainImgIndex;								// Tracks frame buffer index for current frame
 	uint32_t frameCycle = 0, stagingCycleOffset = 0;	// Tracks transfer cycle
