@@ -44,7 +44,7 @@ int main(int argc, const char* argv)
 	uint32_t RUN_ONCE = 1;
 	uint32_t LOCALITY_TESTS = 14; 
 
-	uint32_t ITERS = 32;
+	uint32_t ITERS = 16;
 
 	for (uint32_t i = 0; i < (MIN_SAMPLES == 0 ? 1 : ITERS); i++)
 	{
@@ -57,9 +57,10 @@ int main(int argc, const char* argv)
 		compQueue2.clear();
 
 		VulkanRenderer renderer;
-		uint32_t particles = 1024 * 512*1;//64 * (i+1);
-		uint32_t dimW = 1024, dimH = 64*(i+1), pixels = dimW * dimH;
-		float locality = 8.f;// 512.f / (std::pow(2.f, i));
+		uint32_t particles = 1024 *  64 * (i + 33);
+		uint32_t dimW = 1024, dimH = 1024;//64 * (i + 1);
+		uint32_t pixels = dimW * dimH;
+		float locality = 8.f; // 0.25f * (std::pow(2.f, i*0.4f));
 		uint32_t mode = ComputeExperiment::Mode::MULTI_QUEUE;
 		uint32_t shader = ComputeExperiment::MEM_LIMITED;
 		std::stringstream outString;
